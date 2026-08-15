@@ -1,14 +1,21 @@
 // Shared ZAI (GLM) client singleton -- server-only.
 // The z-ai-web-dev-sdk auto-loads credentials from /etc/.z-ai-config (or
-// project-local .z-ai-config) via ZAI.create(). In production deployments the
-// user must supply GLM_API_KEY (and optionally GLM_BASE_URL) as Vercel env
-// vars -- see README. We honor those if set by writing a project-local config
-// file at module load time so the SDK's auto-loader picks them up.
+// project-local .z-ai-config) via ZAI.create(). In production deployments
+// (Vercel) the user must supply credentials as env vars; we honor those by
+// writing a project-local .z-ai-config file at module load time so the SDK's
+// auto-loader picks them up.
+//
+// The SDK uses FOUR fields for auth (sent as headers):
+//   - apiKey   ->  Authorization: Bearer <apiKey>
+//   - chatId   ->  X-Chat-Id: <chatId>
+//   - userId   ->  X-User-Id: <userId>
+//   - token    ->  X-Token: <token>
+// We pass through all four from env vars so credentials that work in one
+// environment (e.g. this sandbox) can be reproduced in another (Vercel).
 //
 // hasLLMKey() returns true if EITHER the GLM_API_KEY env var is set OR the
 // SDK's auto-loader config file exists at /etc/.z-ai-config or
-// <cwd>/.z-ai-config. This way, environments where the SDK has credentials
-// (like this sandbox) are treated as "LLM available" even without env vars.
+// <cwd>/.z-ai-config.
 //
 // withRetry() wraps any async function with exponential backoff for 429s.
 
@@ -18,6 +25,9 @@ import path from "path";
 
 const apiKey = process.env.GLM_API_KEY ?? "";
 const baseUrl = process.env.GLM_BASE_URL ?? "https://api.z.ai/api/paas/v4";
+const chatId = process.env.GLM_CHAT_ID ?? "";
+const userId = process.env.GLM_USER_ID ?? "";
+const token = process.env.GLM_TOKEN ?? "";
 
 async function fileExists(p: string): Promise<boolean> {
   try {
@@ -41,17 +51,22 @@ export async function hasLLMKey(): Promise<boolean> {
 }
 
 /** Synchronous version -- only checks env var. Use the async version when
- * possible, but this works for places where you can't await. */
+ * possible. */
 export function hasLLMKeySync(): boolean {
   return Boolean(apiKey);
 }
 
 // If GLM_API_KEY is set via env (Vercel), write a project-local .z-ai-config
-// so the SDK's auto-loader picks it up. Idempotent.
+// with ALL the auth fields the SDK supports (apiKey, baseUrl, chatId, userId,
+// token) so the SDK's auto-loader picks them up. Idempotent.
 async function ensureLocalConfig() {
   if (!apiKey) return; // fall back to /etc/.z-ai-config
   const configPath = path.join(process.cwd(), ".z-ai-config");
-  const desired = JSON.stringify({ apiKey, baseUrl });
+  const config: Record<string, string> = { apiKey, baseUrl };
+  if (chatId) config.chatId = chatId;
+  if (userId) config.userId = userId;
+  if (token) config.token = token;
+  const desired = JSON.stringify(config);
   try {
     const existing = await fs.readFile(configPath, "utf-8");
     if (existing.trim() === desired.trim()) return;
