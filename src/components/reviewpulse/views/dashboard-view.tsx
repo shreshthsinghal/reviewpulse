@@ -92,13 +92,13 @@ export function DashboardView({
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-xs text-[var(--primary)]">
-            Weekly Pulse · {meta.appName}
+            Weekly Pulse | {meta.appName}
           </div>
           <h1 className="mt-2 text-4xl sm:text-5xl font-bold tracking-tight">
-            {meta.appName} — this week, at a glance
+            {meta.appName} -- this week, at a glance
           </h1>
           <div className="mt-2 text-xs text-muted-foreground">
-            {meta.dateRange.start} → {meta.dateRange.end} · {meta.reviewCount} reviews
+            {meta.dateRange.start} {"->"} {meta.dateRange.end} | {meta.reviewCount} reviews
             {meta.usedFallback && (
               <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="h-3 w-3" />
@@ -119,7 +119,7 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* Pinned note (prominent — not buried) */}
+      {/* Pinned note (prominent -- not buried) */}
       <motion.div
         initial={reduceMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -127,9 +127,9 @@ export function DashboardView({
         className="mt-8 rounded-2xl border border-[var(--primary)]/30 bg-[var(--surface)] p-6 sm:p-8 shadow-sm"
       >
         <div className="flex items-baseline justify-between border-b border-border pb-3">
-          <div className="text-lg font-semibold">Weekly Note · ≤250 words</div>
+          <div className="text-lg font-semibold">Weekly Note | <=250 words</div>
           <div className="text-xs text-muted-foreground">
-            {note.wordCount} words · {note.quotes.length} quotes · {note.actions.length} actions
+            {note.wordCount} words | {note.quotes.length} quotes | {note.actions.length} actions
           </div>
         </div>
         <div className="prose-pulse mt-4 text-sm leading-relaxed text-foreground">
@@ -145,7 +145,7 @@ export function DashboardView({
 
       {/* Charts grid */}
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <ChartCard title="Rating trend" subtitle="Average rating per week (last 8–12 wks)">
+        <ChartCard title="Rating trend" subtitle="Average rating per week (last 8-12 wks)">
           {enoughForCharts ? (
             <RatingTrendChart data={trend} />
           ) : (

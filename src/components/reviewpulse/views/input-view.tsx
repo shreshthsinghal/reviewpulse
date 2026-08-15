@@ -52,7 +52,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
           `/api/playstore-search?q=${encodeURIComponent(searchQ)}`,
           { signal: searchAbort.current.signal }
         );
-        // Read text first, parse JSON safely — avoids "Unexpected token" if
+        // Read text first, parse JSON safely -- avoids "Unexpected token" if
         // the server returns HTML or empty body.
         const rawText = await res.text();
         let data: any = null;
@@ -60,7 +60,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
           try {
             data = JSON.parse(rawText);
           } catch {
-            // Non-JSON response — surface as error
+            // Non-JSON response -- surface as error
             data = { error: `Server returned non-JSON response (${res.status})` };
           }
         }
@@ -119,7 +119,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
         setError("Upload at least one screenshot first.");
         return;
       }
-      // For the first iteration, we send only the first image — the pipeline
+      // For the first iteration, we send only the first image -- the pipeline
       // could be extended to handle multiple, but one good screenshot already
       // demonstrates the OCR path.
       const dataUrl = await fileToDataUrl(imgFiles[0]);
@@ -147,7 +147,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
       </h1>
       <p className="mt-3 max-w-xl text-muted-foreground">
         Three equally-weighted import paths. All four resolve to the same
-        internal schema — reviews are PII-scrubbed at ingestion, before any
+        internal schema -- reviews are PII-scrubbed at ingestion, before any
         downstream stage touches them.
       </p>
 
@@ -175,7 +175,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
           icon={<ImageIcon className="h-4 w-4" />}
           title="Upload image"
           subtitle="Screenshots OK"
-          guidance="One or more screenshots of review listings. GLM-4V reads the rating + date + body."
+          guidance="One or more screenshots of review listings. A vision model reads the rating, date and body."
         />
       </div>
 
@@ -189,7 +189,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
                 id="q"
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="e.g. PhonePe, Spotify, Zerodha…"
+                placeholder="e.g. PhonePe, Spotify, Zerodha..."
                 className="h-11"
               />
               {searching && (
@@ -246,7 +246,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
               id="appNamePdf"
               value={appName}
               onChange={(e) => setAppName(e.target.value)}
-              placeholder="e.g. Groww, PhonePe…"
+              placeholder="e.g. Groww, PhonePe..."
               className="mt-2 h-11"
             />
             <Label className="mt-4 block">PDF file</Label>
@@ -258,7 +258,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
             />
             {pdfFile && (
               <div className="mt-2 text-xs text-muted-foreground">
-                {pdfFile.name} · {(pdfFile.size / 1024).toFixed(1)} KB
+                {pdfFile.name} | {(pdfFile.size / 1024).toFixed(1)} KB
               </div>
             )}
           </div>
@@ -271,10 +271,10 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
               id="appNameImg"
               value={appName}
               onChange={(e) => setAppName(e.target.value)}
-              placeholder="e.g. Groww, PhonePe…"
+              placeholder="e.g. Groww, PhonePe..."
               className="mt-2 h-11"
             />
-            <Label className="mt-4 block">Image file(s) — screenshots of review listings</Label>
+            <Label className="mt-4 block">Image file(s) -- screenshots of review listings</Label>
             <input
               type="file"
               accept="image/*"
@@ -288,8 +288,8 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
               </div>
             )}
             <p className="mt-3 text-xs text-muted-foreground/80">
-              GLM-4V reads the rating, date and review text directly from the
-              image. No OCR library needed.
+              A vision model reads the rating, date and review text directly
+              from the image. No standalone OCR library needed.
             </p>
           </div>
         )}
@@ -301,7 +301,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
             ? "Public Play Store listing"
             : tab === "pdf"
             ? "Server-side pdf-parse"
-            : "GLM-4V vision extraction"}
+            : "Vision model extraction"}
         </div>
         <Button
           size="lg"
@@ -312,7 +312,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
           {busy ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Running pipeline…
+              Running pipeline...
             </>
           ) : (
             "Run pipeline"

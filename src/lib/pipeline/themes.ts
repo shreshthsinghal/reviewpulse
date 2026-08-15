@@ -1,5 +1,5 @@
-// ReviewPulse — theme grouping (≤5 themes, ever).
-// Spec §4.4:
+// ReviewPulse -- theme grouping (<=5 themes, ever).
+// Spec S4.4:
 //   - For Groww (or any app using the Groww legend), use the fixed legend.
 //   - For any other app, run an LLM clustering pass proposing up to 5 themes.
 //   - Hard cap at 5; merge overflow into "Other".
@@ -21,11 +21,11 @@ export function getThemeLegend(appName: string): string[] {
   if (isGrowwLegend(appName)) {
     return [...GROWW_THEME_LEGEND];
   }
-  return []; // dynamic — must be discovered from data
+  return []; // dynamic -- must be discovered from data
 }
 
 // Maximum number of reviews we send to the LLM classifier. 60 most-recent
-// reviews is plenty of signal for a weekly pulse — classifying all 300+ that
+// reviews is plenty of signal for a weekly pulse -- classifying all 300+ that
 // a popular app returns in 12 weeks would (a) blow through LLM rate limits
 // and (b) not improve the note quality since we only surface 3 themes anyway.
 const MAX_REVIEWS_TO_CLASSIFY = 60;
@@ -35,7 +35,7 @@ const MAX_REVIEWS_TO_CLASSIFY = 60;
 // We chunk large sets so each LLM call stays under ~30 reviews (payload size
 // + rate limit friendly) and we cap at MAX_REVIEWS_TO_CLASSIFY most recent.
 //
-// Spec §4.4 mandates a fixed legend for Groww. However, if >80% of reviews
+// Spec S4.4 mandates a fixed legend for Groww. However, if >80% of reviews
 // land in "Other" using that legend (signal: the legend doesn't match what
 // real users actually complain about), we fall back to dynamic theme
 // discovery so the user gets a useful pulse. This is documented in the README.
@@ -61,7 +61,7 @@ export async function classifyReviews(
   const otherShare = otherCount / Math.max(result.reviews.length, 1);
   if (forcedLegend && otherShare > 0.8 && result.reviews.length > 10) {
     console.warn(
-      `[themes] fixed legend produced ${Math.round(otherShare * 100)}% "Other" — falling back to dynamic themes for ${appName}`
+      `[themes] fixed legend produced ${Math.round(otherShare * 100)}% "Other" -- falling back to dynamic themes for ${appName}`
     );
     const dynamicThemes = await proposeDynamicThemes(reviews, appName);
     const capped = capThemes(dynamicThemes);
@@ -86,7 +86,7 @@ async function classifyWithLegend(
   themes: string[]
 ): Promise<{ reviews: Review[]; themes: string[] }> {
   // Sort by date desc, take the most-recent MAX_REVIEWS_TO_CLASSIFY. We still
-  // build the theme breakdown from ALL reviews below — but only the classified
+  // build the theme breakdown from ALL reviews below -- but only the classified
   // subset gets theme tags from the LLM; the rest keep their pre-existing
   // tag (or "Other" if none).
   const sorted = [...reviews].sort((a, b) => b.date.localeCompare(a.date));
@@ -107,7 +107,7 @@ async function classifyWithLegend(
       const mapping = await classifyChunk(chunks[i], appName, themes);
       for (const [id, theme] of mapping) themeById.set(id, theme);
     } catch (err) {
-      // If even retry fails, the chunk's reviews stay "Other" — the pipeline
+      // If even retry fails, the chunk's reviews stay "Other" -- the pipeline
       // continues with the chunks we did classify. Better partial output than
       // a 500 error.
       console.warn(`[themes] chunk ${i + 1}/${chunks.length} failed:`, (err as Error).message);
@@ -134,7 +134,7 @@ Themes: ${themes.join(", ")}
 Rules:
 - Assign exactly one theme per review.
 - Try to find the BEST-fitting theme from the list before falling back to "Other."
-- "Other" should be used for fewer than ~25% of reviews. If you find yourself assigning "Other" frequently, look again — there is usually a better fit.
+- "Other" should be used for fewer than ~25% of reviews. If you find yourself assigning "Other" frequently, look again -- there is usually a better fit.
 - Never invent a theme outside the provided list.
 - Base the assignment only on the review text and title provided.
 Output: JSON array of {id, theme} pairs, nothing else.`;
@@ -184,7 +184,7 @@ Output: JSON array of {id, theme} pairs, nothing else.`;
 }
 
 // Ask the LLM to propose up to 5 themes appropriate to the app's actual
-// review content. This is the dynamic fallback per spec §4.4.
+// review content. This is the dynamic fallback per spec S4.4.
 async function proposeDynamicThemes(
   reviews: Review[],
   appName: string
@@ -241,11 +241,11 @@ function capThemes(themes: string[]): string[] {
     if (!themes.includes("Other")) return [...themes, "Other"].slice(0, MAX_THEMES);
     return themes;
   }
-  // Cap — keep first (MAX_THEMES - 1) and force "Other" as the last slot.
+  // Cap -- keep first (MAX_THEMES - 1) and force "Other" as the last slot.
   return [...themes.slice(0, MAX_THEMES - 1), "Other"];
 }
 
-// Build theme breakdown — counts, share, avg rating, top sentiment.
+// Build theme breakdown -- counts, share, avg rating, top sentiment.
 export function buildThemeBreakdown(reviews: Review[]): ThemeBreakdown[] {
   if (reviews.length === 0) return [];
   const counts = new Map<string, Review[]>();

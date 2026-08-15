@@ -1,6 +1,6 @@
-// ReviewPulse — app-wide constants
+// ReviewPulse -- app-wide constants
 
-// The Groww default theme legend, per spec §4.4. Documented in README.
+// The Groww default theme legend, per spec S4.4. Documented in README.
 export const GROWW_DEFAULT_APP = "Groww";
 
 export const GROWW_THEME_LEGEND = [
@@ -11,23 +11,23 @@ export const GROWW_THEME_LEGEND = [
   "Withdrawals",
 ] as const;
 
-// Hard cap — never exceed this anywhere (charts, note, exports).
+// Hard cap -- never exceed this anywhere (charts, note, exports).
 export const MAX_THEMES = 5;
 
-// Note constraints (spec §4.5)
+// Note constraints (spec S4.5)
 export const NOTE_WORD_LIMIT = 250;
 export const NOTE_TOP_THEMES = 3;
 export const NOTE_QUOTES = 3;
 export const NOTE_ACTIONS = 3;
 
-// Email constraints (spec §4.7)
+// Email constraints (spec S4.7)
 export const EMAIL_SUBJECT_LIMIT = 60;
 
-// Review window (spec §1) — 8 to 12 weeks back from today.
+// Review window (spec S1) -- 8 to 12 weeks back from today.
 export const REVIEW_WINDOW_WEEKS_MIN = 8;
 export const REVIEW_WINDOW_WEEKS_MAX = 12;
 
-// Below this many reviews, charts become misleading — show a sentence instead.
+// Below this many reviews, charts become misleading -- show a sentence instead.
 export const MIN_REVIEWS_FOR_CHARTS = 15;
 
 // Groww public listing IDs (no auth, public pages only)

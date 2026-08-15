@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ReviewPulse — Weekly app review pulse, in one scannable page",
+  title: "ReviewPulse -- Weekly app review pulse, in one scannable page",
   description:
     "ReviewPulse turns recent App Store + Play Store reviews into a scannable weekly one-page note: top themes, real user quotes, and action ideas.",
   keywords: [
@@ -24,16 +24,16 @@ export const metadata: Metadata = {
     "App Store",
     "LLM",
     "prompting",
-    "AI workflow",
+    "workflow automation",
   ],
   authors: [{ name: "ReviewPulse" }],
   icons: {
     icon: "/logo.svg",
   },
   openGraph: {
-    title: "ReviewPulse — weekly app review pulse",
+    title: "ReviewPulse -- weekly app review pulse",
     description:
-      "Import → Group → Generate Note → Draft Email. One scannable page per week, zero PII.",
+      "Import > Group > Generate Note > Draft Email. One scannable page per week, zero PII.",
     siteName: "ReviewPulse",
     type: "website",
   },

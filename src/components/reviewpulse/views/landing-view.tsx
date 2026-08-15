@@ -29,7 +29,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
           <div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              Weekly review pulse · for product, growth, support &amp; leadership
+              Weekly review pulse | for product, growth, support &amp; leadership
             </div>
 
             <h1 className="mt-5 text-5xl sm:text-6xl font-bold leading-[1.05] tracking-tight text-foreground">
@@ -58,8 +58,8 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              ReviewPulse ingests the last 8–12 weeks of public App Store &amp; Play
-              Store reviews, groups them into ≤5 themes, drafts a ≤250-word weekly
+              ReviewPulse ingests the last 8-12 weeks of public App Store &amp; Play
+              Store reviews, groups them into <=5 themes, drafts a <=250-word weekly
               note with 3 real quotes &amp; 3 action ideas, and writes the email
               for you. No dashboards to dig through. No PII anywhere.
             </p>
@@ -85,10 +85,10 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground/80">
-              <span>4-stage pipeline · Import → Group → Note → Email</span>
-              <span className="hidden sm:inline">·</span>
+              <span>4-stage pipeline | Import > Group > Note > Email</span>
+              <span className="hidden sm:inline"> - </span>
               <span>Public data only</span>
-              <span className="hidden sm:inline">·</span>
+              <span className="hidden sm:inline"> - </span>
               <span>PII-scrubbed</span>
             </div>
           </div>
@@ -113,8 +113,8 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
               <ol className="mt-4 space-y-3 text-sm">
                 {[
                   { n: "01", label: "Import", desc: "Public Play Store + App Store reviews", icon: <Search className="h-4 w-4" /> },
-                  { n: "02", label: "Group", desc: "PII scrub + ≤5 themes", icon: <FileText className="h-4 w-4" /> },
-                  { n: "03", label: "Generate Note", desc: "≤250 words · 3 themes · 3 quotes", icon: <FileText className="h-4 w-4" /> },
+                  { n: "02", label: "Group", desc: "PII scrub + <=5 themes", icon: <FileText className="h-4 w-4" /> },
+                  { n: "03", label: "Generate Note", desc: "<=250 words | 3 themes | 3 quotes", icon: <FileText className="h-4 w-4" /> },
                   { n: "04", label: "Draft Email", desc: "Subject + body, ready to send", icon: <ImageIcon className="h-4 w-4" /> },
                 ].map((s) => (
                   <li
@@ -136,13 +136,13 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
 
             {/* Editorial accent */}
             <div className="absolute -bottom-3 -right-2 rotate-3 rounded-md border border-[var(--primary)]/30 bg-[var(--primary)]/5 px-3 py-1 text-xs text-[var(--primary)]">
-              ≤ 250 words · 3 themes · 3 quotes · 3 actions
+              <= 250 words | 3 themes | 3 quotes | 3 actions
             </div>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* Below-the-fold feature strip — appears only after intro */}
+      {/* Below-the-fold feature strip -- appears only after intro */}
       {introDone && (
         <motion.section
           initial={reduceMotion ? false : { opacity: 0 }}
@@ -159,7 +159,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
             <FeatureBlock
               kicker="For support"
               title="Acknowledge what users are saying"
-              body="3 real, PII-scrubbed user quotes per week — verbatim wording, attributed only to theme + star rating."
+              body="3 real, PII-scrubbed user quotes per week -- verbatim wording, attributed only to theme + star rating."
             />
             <FeatureBlock
               kicker="For leadership"

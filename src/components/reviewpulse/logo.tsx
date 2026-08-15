@@ -13,22 +13,22 @@ interface LogoProps {
 }
 
 /**
- * ReviewPulse logo — built on Gestalt principles.
+ * ReviewPulse logo -- built on Gestalt principles.
  *
  * The mark fuses two ideas through closure + figure-ground:
  *  - a speech bubble (review)
  *  - an upward checkmark / trend line (signal going up)
  * The shape only "resolves" once the stroke draws in and the negative space
  * completes the bubble outline. A small three-dot cluster at the lower-left
- * uses proximity/similarity to suggest a "lens" — the analyst's eye on the
+ * uses proximity/similarity to suggest a "lens" -- the analyst's eye on the
  * signal.
  *
- * Animation sequence (spec §7.4, ≤2s, skippable, reduced-motion fallback):
- *  0.0 – 0.6s : stroke draws in (outline only)
- *  0.6 – 0.9s : fill fades in
- *  0.9 – 1.1s : closure settle/bounce
- *  1.1 – 1.6s : mark scales down + slides into nav position
- *  1.6 – 2.0s : wordmark fades in
+ * Animation sequence (spec S7.4, <=2s, skippable, reduced-motion fallback):
+ *  0.0 - 0.6s : stroke draws in (outline only)
+ *  0.6 - 0.9s : fill fades in
+ *  0.9 - 1.1s : closure settle/bounce
+ *  1.1 - 1.6s : mark scales down + slides into nav position
+ *  1.6 - 2.0s : wordmark fades in
  */
 export function Logo({
   size = 40,
@@ -87,7 +87,7 @@ export function Logo({
           ease: "easeOut",
         }}
       />
-      {/* The trend line + checkmark kink — the "pulse" inside the bubble */}
+      {/* The trend line + checkmark kink -- the "pulse" inside the bubble */}
       <motion.path
         d="M14 24L21 18L26 22L34 13"
         stroke="var(--background)"
@@ -104,7 +104,7 @@ export function Logo({
           ease: "easeOut",
         }}
       />
-      {/* Three-dot "lens" cluster — proximity/similarity supporting motif */}
+      {/* Three-dot "lens" cluster -- proximity/similarity supporting motif */}
       <motion.g
         initial={intro && !reduceMotion ? { opacity: 0, scale: 0 } : false}
         animate={

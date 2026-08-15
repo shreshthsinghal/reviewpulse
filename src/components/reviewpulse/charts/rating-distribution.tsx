@@ -23,7 +23,7 @@ const COLORS: Record<number, string> = {
 export function RatingDistributionChart({ data }: { data: RatingDistribution[] }) {
   if (data.length === 0) return null;
   const chartData = data.map((d) => ({
-    rating: `${d.rating}★`,
+    rating: `${d.rating}*`,
     count: d.count,
     raw: d.rating,
   }));

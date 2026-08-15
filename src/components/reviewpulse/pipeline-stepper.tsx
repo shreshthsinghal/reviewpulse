@@ -39,7 +39,7 @@ export function PipelineStepper({ stages, variant = "default" }: Props) {
               <span>{s.label}</span>
             </span>
             {i < ordered.length - 1 && (
-              <span className="text-muted-foreground/50">→</span>
+              <span className="text-muted-foreground/50">{" -> "}</span>
             )}
           </React.Fragment>
         ))}
@@ -84,7 +84,7 @@ export function PipelineStepper({ stages, variant = "default" }: Props) {
                 </div>
               </div>
               <div className="mt-0.5 text-sm text-muted-foreground">
-                {s.message || (s.status === "pending" ? "Pending…" : "")}
+                {s.message || (s.status === "pending" ? "Pending..." : "")}
               </div>
               {s.detail && (
                 <div className="mt-1 text-xs text-muted-foreground/80 italic">

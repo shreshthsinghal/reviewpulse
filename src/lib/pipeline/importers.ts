@@ -1,6 +1,6 @@
-// ReviewPulse — review importers.
+// ReviewPulse -- review importers.
 // All four import paths resolve to the same internal Review schema (no PII
-// fields by design). PII scrubbing happens in a separate pass downstream —
+// fields by design). PII scrubbing happens in a separate pass downstream --
 // these importers ONLY normalize raw text/rating/date out of the source.
 
 import type { Review, ReviewSource } from "./types";
@@ -40,16 +40,16 @@ function clampRating(n: unknown): 1 | 2 | 3 | 4 | 5 | null {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Play Store — public listing only.
+// 1. Play Store -- public listing only.
 //    Uses google-play-scraper (an unofficial but widely-used library that
 //    reads the public, non-authenticated Play Store listing pages via the
-//    internal batchexecute JSON-RPC endpoint — same data the browser sees
+//    internal batchexecute JSON-RPC endpoint -- same data the browser sees
 //    when you visit play.google.com/store/apps/details?id=...). No Play
 //    Console / Developer API is used (those require app ownership). See
 //    README for ToS implications.
 // ---------------------------------------------------------------------------
 
-// Dynamic import — google-play-scraper ships ESM-only and we only need it
+// Dynamic import -- google-play-scraper ships ESM-only and we only need it
 // when a Play Store fetch is actually requested.
 async function getScraper() {
   return (await import("google-play-scraper")).default;
@@ -111,7 +111,7 @@ export async function fetchPlayStoreReviews(
 ): Promise<{ reviews: Review[]; usedFallback: boolean; fallbackReason?: string }> {
   try {
     const scraper = await getScraper();
-    // Fetch newest reviews — paginate up to maxPages (default 3 = ~150 reviews).
+    // Fetch newest reviews -- paginate up to maxPages (default 3 = ~150 reviews).
     // We cap because (a) we only classify 60 most-recent anyway, and (b) it
     // keeps the pipeline fast and LLM-rate-limit-friendly.
     const maxPages = opts.maxPages ?? 3;
@@ -144,7 +144,7 @@ export async function fetchPlayStoreReviews(
         id: genId("ps", idx),
         source: "play_store" as ReviewSource,
         rating: clampRating(x.score) ?? 3,
-        // Drop the userName — PII — at ingestion. The schema has no field for
+        // Drop the userName -- PII -- at ingestion. The schema has no field for
         // it, so we just don't carry it forward.
         title: typeof x.title === "string" && x.title.trim() ? x.title : null,
         text: x.text ?? "",
@@ -170,7 +170,7 @@ export async function fetchPlayStoreReviews(
 }
 
 // ---------------------------------------------------------------------------
-// 2. App Store — Apple's public per-app Customer Reviews RSS feed (JSON).
+// 2. App Store -- Apple's public per-app Customer Reviews RSS feed (JSON).
 //    Genuinely official, no auth. Example URL:
 //    https://itunes.apple.com/rss/customerreviews/page=1/id=APPID/sortby=mostrecent/json
 // ---------------------------------------------------------------------------
@@ -196,7 +196,7 @@ export async function fetchAppStoreReviews(
     const reviews: Review[] = [];
     if (Array.isArray(entries)) {
       entries.forEach((e: any, idx: number) => {
-        // first entry is the app itself — skip if it has no review content
+        // first entry is the app itself -- skip if it has no review content
         const rating = clampRating(parseInt(e?.["im:rating"]?.label ?? "", 10));
         const text = e?.content?.label;
         const title = e?.title?.label;
@@ -226,7 +226,7 @@ export async function fetchAppStoreReviews(
 }
 
 // ---------------------------------------------------------------------------
-// 3. PDF upload — server-side pdf-parse, then LLM extraction of review blocks.
+// 3. PDF upload -- server-side pdf-parse, then LLM extraction of review blocks.
 // ---------------------------------------------------------------------------
 
 export async function parsePdfReviews(
@@ -234,7 +234,7 @@ export async function parsePdfReviews(
   appName: string
 ): Promise<{ reviews: Review[]; usedFallback: boolean; fallbackReason?: string }> {
   try {
-    // dynamic import — pdf-parse is CommonJS, we use dynamic import for safety
+    // dynamic import -- pdf-parse is CommonJS, we use dynamic import for safety
     const pdfParse = (await import("pdf-parse")).default;
     const data = await pdfParse(pdfBuffer, { max: 0 } as any);
     const text = data?.text ?? "";
@@ -268,7 +268,7 @@ export async function parsePdfReviews(
 }
 
 // ---------------------------------------------------------------------------
-// 4. Image upload — GLM-4V (vision LLM) OCR + structured extraction in one
+// 4. Image upload -- GLM-4V (vision LLM) OCR + structured extraction in one
 //    call. Better than a pure OCR library because it can also read star
 //    ratings and dates as structured data, not just text glyphs.
 // ---------------------------------------------------------------------------
@@ -379,7 +379,7 @@ async function llmExtractReviewsFromText(
 
 function safeJsonParseArr(s: string): any[] {
   try {
-    // LLMs sometimes wrap JSON in ```json fences — strip them.
+    // LLMs sometimes wrap JSON in ```json fences -- strip them.
     const cleaned = s
       .replace(/^```(?:json)?/i, "")
       .replace(/```$/i, "")
@@ -399,7 +399,7 @@ function safeJsonParseArr(s: string): any[] {
 }
 
 // ---------------------------------------------------------------------------
-// Groww default flow — combines Play Store + App Store, falls back to sample
+// Groww default flow -- combines Play Store + App Store, falls back to sample
 // ---------------------------------------------------------------------------
 
 export async function importGrowwDefault(): Promise<{

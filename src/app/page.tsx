@@ -66,7 +66,7 @@ export default function Home() {
     }, 500);
   }
 
-  // Live stepper animation — we simulate stage activation while the real
+  // Live stepper animation -- we simulate stage activation while the real
   // /api/pipeline call is in flight. The server returns the final stages;
   // this is just UX sugar to make the pipeline visibly progress. Timers
   // are generous because real classification with chunking can take 20-30s
@@ -80,7 +80,7 @@ export default function Home() {
         if (cancelled) return;
         setStages((s) =>
           s.map((x) =>
-            x.id === "import" ? { ...x, status: "active", message: "Fetching reviews…" } : x
+            x.id === "import" ? { ...x, status: "active", message: "Fetching reviews..." } : x
           )
         );
       }, 100)
@@ -91,7 +91,7 @@ export default function Home() {
         setStages((s) =>
           s.map((x) =>
             x.id === "group"
-              ? { ...x, status: "active", message: "Scrubbing PII + classifying themes…" }
+              ? { ...x, status: "active", message: "Scrubbing PII + classifying themes..." }
               : x.id === "import"
               ? { ...x, status: "done", message: "Reviews imported." }
               : x
@@ -105,7 +105,7 @@ export default function Home() {
         setStages((s) =>
           s.map((x) =>
             x.id === "note"
-              ? { ...x, status: "active", message: "Generating weekly note…" }
+              ? { ...x, status: "active", message: "Generating weekly note..." }
               : x.id === "group"
               ? { ...x, status: "done", message: "Themes identified." }
               : x
@@ -141,7 +141,7 @@ export default function Home() {
         try {
           data = JSON.parse(rawText);
         } catch {
-          // Not JSON — surface the raw text (truncated) as the error.
+          // Not JSON -- surface the raw text (truncated) as the error.
           throw new Error(
             `Pipeline returned a non-JSON response (status ${res.status}): ${rawText.slice(0, 200)}`
           );
@@ -159,13 +159,13 @@ export default function Home() {
       // Friendlier messages for common failure modes.
       if (/429|too many requests/i.test(msg)) {
         msg =
-          "The LLM API is rate-limiting us. Please wait ~30 seconds and try again — the pipeline makes several LLM calls in sequence.";
+          "The LLM API is rate-limiting us. Please wait ~30 seconds and try again -- the pipeline makes several LLM calls in sequence.";
       } else if (/timeout|timed out|aborted/i.test(msg)) {
         msg =
           "The pipeline timed out. This usually means the LLM API is slow or rate-limiting us. Wait a minute and try again.";
       } else if (/non-json/i.test(msg)) {
         msg =
-          "The server returned an unexpected response (likely a function timeout on Vercel — the pipeline takes 20-60s which exceeds Hobby tier's 10s limit; deploy on Vercel Pro with maxDuration=300, or run locally).";
+          "The server returned an unexpected response (likely a function timeout on Vercel -- the pipeline takes 20-60s which exceeds Hobby tier's 10s limit; deploy on Vercel Pro with maxDuration=300, or run locally).";
       }
       setError(msg);
       // Stay on a sensible view: if the user came from the Groww default CTA,
@@ -184,7 +184,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Sticky nav — hidden during the intro animation so it doesn't peek
+      {/* Sticky nav -- hidden during the intro animation so it doesn't peek
           out from behind the overlay. Appears as soon as intro starts fading
           out or when the user navigates to any other view. */}
       <header
@@ -216,7 +216,7 @@ export default function Home() {
       <main className="flex-1">
         {view === "intro" && (
           <>
-            {/* Intro overlay — fully covers the page and blocks interaction
+            {/* Intro overlay -- fully covers the page and blocks interaction
                 until the logo animation completes (~2s, or instant for
                 reduced-motion). The landing content underneath only fades
                 in once the overlay starts fading out, so users never see a
@@ -237,7 +237,7 @@ export default function Home() {
               </motion.div>
             )}
             {/* Landing content fades in only after intro animation finishes
-                (introFading=true) — keeps the page from being interactive
+                (introFading=true) -- keeps the page from being interactive
                 mid-animation. */}
             <div
               className={
@@ -310,14 +310,14 @@ export default function Home() {
         )}
       </main>
 
-      {/* Footer — sticks to bottom */}
+      {/* Footer -- sticks to bottom */}
       <footer className="mt-auto border-t border-border bg-background">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-6 py-4 sm:flex-row sm:items-center">
           <div className="text-xs text-muted-foreground">
-            ReviewPulse · weekly app review pulse · public data only · PII-scrubbed
+            ReviewPulse | weekly app review pulse | public data only | PII-scrubbed
           </div>
           <div className="text-xs text-muted-foreground/70">
-            Import → Group → Note → Email
+            Import {"->"} Group {"->"} Note {"->"} Email
           </div>
         </div>
       </footer>

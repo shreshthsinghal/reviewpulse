@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "EMAIL_API_KEY / EMAIL_FROM not set on this deployment. Copy or Download the draft instead — both satisfy the deliverable.",
+          "EMAIL_API_KEY / EMAIL_FROM not set on this deployment. Copy or Download the draft instead -- both satisfy the deliverable.",
       },
       { status: 501 }
     );

@@ -46,27 +46,27 @@ export function SettingsView({ onBack, onRerun }: Props) {
           <div className="mt-3 space-y-3 text-sm text-muted-foreground leading-relaxed">
             <p>
               ReviewPulse runs a 4-stage pipeline:{" "}
-              <span className="text-foreground">Import → Group → Generate Note → Draft Email</span>.
-              All four stages run server-side via Next.js API routes against the
-              GLM model.
+              <span className="text-foreground">Import  >  Group  >  Generate Note  >  Draft Email</span>.
+              All four stages run server-side via Next.js API routes, with an
+              LLM doing classification, summarization and drafting.
             </p>
             <ol className="ml-4 list-decimal space-y-2">
               <li>
                 <strong>Import:</strong> fetches public reviews (Play Store listing,
                 App Store RSS, uploaded PDF, or uploaded screenshot). All sources
-                resolve to the same internal schema — and that schema has{" "}
+                resolve to the same internal schema -- and that schema has{" "}
                 <em>no</em> PII field by design.
               </li>
               <li>
                 <strong>Group:</strong> runs a deterministic PII scrub (emails,
                 phones, IDs, handles, name patterns) and then LLM classifies each
-                review into one of ≤5 themes. For Groww specifically, the fixed
+                review into one of <=5 themes. For Groww specifically, the fixed
                 theme legend below is used; for other apps, themes are proposed
                 dynamically by the LLM from the actual review content.
               </li>
               <li>
-                <strong>Generate Note:</strong> drafts a weekly one-pager — top 3
-                themes, 3 real PII-scrubbed quotes, 3 action ideas, ≤250 words.
+                <strong>Generate Note:</strong> drafts a weekly one-pager -- top 3
+                themes, 3 real PII-scrubbed quotes, 3 action ideas, <=250 words.
                 A second LLM pass verifies no residual PII in the 3 selected
                 quotes.
               </li>
@@ -82,7 +82,7 @@ export function SettingsView({ onBack, onRerun }: Props) {
           <h2 className="text-lg font-semibold">Theme legend (Groww default)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             These 5 themes are used when analyzing Groww. For any other app,
-            themes are discovered dynamically — but always capped at 5.
+            themes are discovered dynamically -- but always capped at 5.
           </p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {GROWW_THEME_LEGEND.map((t, i) => (
@@ -114,7 +114,7 @@ export function SettingsView({ onBack, onRerun }: Props) {
             <p>
               <strong className="text-foreground">No PII anywhere.</strong> The
               internal schema has no field for username, email, phone, or device
-              ID by design — enforced by omission, not by a filter. A two-pass
+              ID by design -- enforced by omission, not by a filter. A two-pass
               scrub (deterministic + LLM verification on the 3 selected quotes)
               runs on every export path.
             </p>

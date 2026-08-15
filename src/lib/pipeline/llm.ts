@@ -1,8 +1,8 @@
-// Shared ZAI (GLM) client singleton — server-only.
+// Shared ZAI (GLM) client singleton -- server-only.
 // The z-ai-web-dev-sdk auto-loads credentials from /etc/.z-ai-config (or
 // project-local .z-ai-config) via ZAI.create(). In production deployments the
 // user must supply GLM_API_KEY (and optionally GLM_BASE_URL) as Vercel env
-// vars — see README. We honor those if set by writing a project-local config
+// vars -- see README. We honor those if set by writing a project-local config
 // file at module load time so the SDK's auto-loader picks them up.
 //
 // hasLLMKey() returns true if EITHER the GLM_API_KEY env var is set OR the
@@ -40,7 +40,7 @@ export async function hasLLMKey(): Promise<boolean> {
   return false;
 }
 
-/** Synchronous version — only checks env var. Use the async version when
+/** Synchronous version -- only checks env var. Use the async version when
  * possible, but this works for places where you can't await. */
 export function hasLLMKeySync(): boolean {
   return Boolean(apiKey);
@@ -56,7 +56,7 @@ async function ensureLocalConfig() {
     const existing = await fs.readFile(configPath, "utf-8");
     if (existing.trim() === desired.trim()) return;
   } catch {
-    // file doesn't exist — fall through and create it
+    // file doesn't exist -- fall through and create it
   }
   try {
     await fs.writeFile(configPath, desired, { mode: 0o600 });

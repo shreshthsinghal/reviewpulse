@@ -1,4 +1,4 @@
-// ReviewPulse — pipeline types
+// ReviewPulse -- pipeline types
 // Internal schema enforces PII-by-omission: there is NO field for username,
 // email, phone, device ID, or reviewer handle anywhere in this file.
 
@@ -10,7 +10,7 @@ export type ReviewSource =
   | "sample";
 
 export interface Review {
-  /** Internal-only ID, generated — never a source-platform user ID. */
+  /** Internal-only ID, generated -- never a source-platform user ID. */
   id: string;
   source: ReviewSource;
   rating: 1 | 2 | 3 | 4 | 5;

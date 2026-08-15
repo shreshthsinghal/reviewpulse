@@ -1,4 +1,4 @@
-// ReviewPulse — client-safe sentiment + chart data helpers.
+// ReviewPulse -- client-safe sentiment + chart data helpers.
 // Pure functions only. No server-only imports. Safe to use in client components.
 
 import type {

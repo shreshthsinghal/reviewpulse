@@ -1,8 +1,8 @@
-// Bundled, redacted Groww sample reviews — guaranteed-working fallback.
+// Bundled, redacted Groww sample reviews -- guaranteed-working fallback.
 // Used when (a) the user clicks the default CTA, or (b) live fetching fails.
 //
 // All entries are synthetic but realistic, modelled on the kind of public
-// review content Groww receives. NO PII anywhere — no usernames, emails,
+// review content Groww receives. NO PII anywhere -- no usernames, emails,
 // phone numbers, account IDs, or order IDs.
 //
 // Dates are computed relative to "today" so the window is always fresh.
@@ -18,7 +18,7 @@ function isoDaysAgo(days: number): string {
 }
 
 // Note: themes are pre-assigned here ONLY so the sample dataset is fast to demo.
-// In the live pipeline, themes are assigned in stage 2 by the LLM classifier —
+// In the live pipeline, themes are assigned in stage 2 by the LLM classifier --
 // we still re-run classification on this sample so the result reflects the
 // prompt, not the pre-tag. (See pipeline route.)
 interface SampleReviewSeed {
@@ -26,13 +26,13 @@ interface SampleReviewSeed {
   title: string | null;
   text: string;
   daysAgo: number;
-  preTag: string; // suggested theme tag — LLM will re-classify
+  preTag: string; // suggested theme tag -- LLM will re-classify
 }
 
 const SEEDS: SampleReviewSeed[] = [
   // Onboarding
   { rating: 5, title: "Smooth start", text: "Opened my account in under 10 minutes. The PAN verification step was quick and the in-app guided tour actually explained what each section does. Best onboarding I have seen on a finance app.", daysAgo: 9, preTag: "Onboarding" },
-  { rating: 4, title: "Good but", text: "Sign-up was easy, the only confusing bit was the mandate step — I had to look it up. Once done, the rest was clean.", daysAgo: 11, preTag: "Onboarding" },
+  { rating: 4, title: "Good but", text: "Sign-up was easy, the only confusing bit was the mandate step -- I had to look it up. Once done, the rest was clean.", daysAgo: 11, preTag: "Onboarding" },
   { rating: 2, title: "Stuck on first screen", text: "Tried to open account, app kept showing a spinner after Aadhaar step. Had to restart. Eventually worked but felt broken.", daysAgo: 14, preTag: "Onboarding" },
   { rating: 5, title: "Easy onboarding", text: "The new onboarding flow is much better than last year. Step-by-step tooltips helped me finish in one go.", daysAgo: 18, preTag: "Onboarding" },
   { rating: 3, title: "Decent", text: "Onboarding is okay. Took 25 minutes total, which is fine but not great compared to other apps.", daysAgo: 22, preTag: "Onboarding" },

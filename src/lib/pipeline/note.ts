@@ -1,6 +1,6 @@
-// ReviewPulse — weekly note generation.
-// Spec §4.5: top 3 themes, 3 real quotes, 3 action ideas, ≤250 words.
-// Tone: neutral, analytical, non-alarmist — a pulse for a team to act on.
+// ReviewPulse -- weekly note generation.
+// Spec S4.5: top 3 themes, 3 real quotes, 3 action ideas, <=250 words.
+// Tone: neutral, analytical, non-alarmist -- a pulse for a team to act on.
 
 import { getLLM, withRetry } from "./llm";
 import { llmVerifyQuotes } from "./pii-scrub";
@@ -46,7 +46,7 @@ export async function generateWeeklyNote(
   if (reviews.length === 0) {
     return emptyNote(appName, dateRange);
   }
-  // Pick top 3 themes by volume — but skip "Other" if there are at least 3
+  // Pick top 3 themes by volume -- but skip "Other" if there are at least 3
   // other concrete themes. "Other" is the catch-all and surfacing it as a top
   // theme doesn't give the reader a useful signal.
   const nonOtherThemes = themes.filter((t) => t.theme !== "Other");
@@ -56,7 +56,7 @@ export async function generateWeeklyNote(
     .slice(0, NOTE_TOP_THEMES)
     .map((t) => ({ theme: t.theme, count: t.count, share: t.share }));
 
-  // Pick candidate quotes — prefer top themes, mix sentiment, short & verbatim.
+  // Pick candidate quotes -- prefer top themes, mix sentiment, short & verbatim.
   const candidates = pickQuoteCandidates(reviews, themes);
 
   const zai = await getLLM();
@@ -64,7 +64,7 @@ export async function generateWeeklyNote(
 Input: grouped, theme-tagged reviews for ${appName}, covering ${dateRange.start} to ${dateRange.end}.
 Write, in markdown, under these exact headers:
 ## Top Themes
-(top 3 themes, one line each, with rough share/volume — use the "topThemes" array provided; do NOT include "Other" unless it's in that array)
+(top 3 themes, one line each, with rough share/volume -- use the "topThemes" array provided; do NOT include "Other" unless it's in that array)
 ## What Users Are Saying
 (3 short real quotes, PII-stripped, each attributed only to theme + star rating, never to a person)
 ## Action Ideas
@@ -117,7 +117,7 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
   // Parse the LLM output back into structured quotes / actions for the UI.
   const { quotes, actions } = parseNoteStructure(markdown, candidates);
 
-  // LLM PII verification pass on the final 3 quotes (spec §4.3 step 2).
+  // LLM PII verification pass on the final 3 quotes (spec S4.3 step 2).
   const verified = await llmVerifyQuotes(quotes);
   const safeQuotes: Quote[] = [];
   for (let i = 0; i < verified.length; i++) {
@@ -141,7 +141,7 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
 }
 
 function pickQuoteCandidates(reviews: Review[], themes: ThemeBreakdown[]): Quote[] {
-  // pick short (≤220 char), text-bearing reviews; aim for variety across themes & sentiments
+  // pick short (<=220 char), text-bearing reviews; aim for variety across themes & sentiments
   const eligible = reviews.filter((r) => r.text && r.text.length >= 20 && r.text.length <= 280);
   const seenThemes = new Set<string>();
   const out: Quote[] = [];
@@ -167,11 +167,11 @@ function pickQuoteCandidates(reviews: Review[], themes: ThemeBreakdown[]): Quote
 
 function enforceWordLimit(md: string): string {
   // Hard truncate at NOTE_WORD_LIMIT words, ensuring we don't cut mid-word
-  // or mid-header. We give the LLM some grace — if it's under by 10%, fine.
+  // or mid-header. We give the LLM some grace -- if it's under by 10%, fine.
   const words = md.split(/\s+/);
   if (words.length <= NOTE_WORD_LIMIT + 5) return md;
   const truncated = words.slice(0, NOTE_WORD_LIMIT - 1).join(" ");
-  return truncated + " …";
+  return truncated + " ...";
 }
 
 function parseNoteStructure(
@@ -180,7 +180,7 @@ function parseNoteStructure(
 ): { quotes: Quote[]; actions: ActionIdea[] } {
   // Best-effort parse of the LLM markdown into structured Quote / Action arrays.
   // The UI also renders the raw markdown directly, so this is for convenience
-  // (dashboard stat tiles, etc.). The LLM may use varied formats — we accept
+  // (dashboard stat tiles, etc.). The LLM may use varied formats -- we accept
   // bullet lines, numbered lines, AND bare lines that look like quotes/themes.
   const quoteBlock = md.split(/## What Users Are Saying/i)[1]?.split(/## Action Ideas/i)[0] ?? "";
   const actionBlock = md.split(/## Action Ideas/i)[1] ?? "";
@@ -189,8 +189,8 @@ function parseNoteStructure(
     l.startsWith("-") ||
     l.startsWith(">") ||
     /^\d+\./.test(l) ||
-    /^[A-Z][^\n]*\([\d★]+\)\s*:/i.test(l) || // "Onboarding (5★): ..."
-    /^[A-Z][^\n]*[:：]\s*[""]/i.test(l); // "Theme: \"...\""
+    /^[A-Z][^\n]*\([\d*]+\)\s*:/i.test(l) || // "Onboarding (5*): ..."
+    /^[A-Z][^\n]*[:]\s*[""]/i.test(l); // "Theme: \"...\""
 
   const quoteLines = quoteBlock
     .split("\n")
@@ -201,7 +201,7 @@ function parseNoteStructure(
     // strip leading bullet/number prefix
     let text = line.replace(/^[-\d.>\s*]+/, "").trim();
     // strip "Theme (rating): " prefix if present
-    text = text.replace(/^[A-Z][^\n(:]*\([\d★]+\)\s*:\s*/i, "");
+    text = text.replace(/^[A-Z][^\n(:]*\([\d*]+\)\s*:\s*/i, "");
     // strip surrounding quotes
     text = text.replace(/^["'"""]/, "").replace(/["'"""]$/, "").trim();
     const cand = candidates[i];
@@ -239,7 +239,7 @@ function emptyNote(
   return {
     appName,
     dateRange,
-    markdown: `## Top Themes\nNot enough reviews in the last 8–12 weeks to identify themes.\n\n## What Users Are Saying\n_No quotes available._\n\n## Action Ideas\n_No actions available._`,
+    markdown: `## Top Themes\nNot enough reviews in the last 8-12 weeks to identify themes.\n\n## What Users Are Saying\n_No quotes available._\n\n## Action Ideas\n_No actions available._`,
     wordCount: 0,
     topThemes: [],
     quotes: [],

@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   if (!llmAvailable) {
     return NextResponse.json({
       results: [],
-      error: "GLM_API_KEY not set — Play Store search unavailable in this environment.",
+      error: "GLM_API_KEY not set -- Play Store search unavailable in this environment.",
     });
   }
   try {

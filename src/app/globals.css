@@ -49,7 +49,7 @@
 }
 
 :root {
-  /* ReviewPulse — Light mode (warm off-white editorial palette) */
+  /* ReviewPulse -- Light mode (warm off-white editorial palette) */
   --radius: 0.625rem;
   --background: #FAF9F6;
   --foreground: #1C1C1E;
@@ -89,7 +89,7 @@
 }
 
 .dark {
-  /* ReviewPulse — Dark mode (deep navy-graphite) */
+  /* ReviewPulse -- Dark mode (deep navy-graphite) */
   --background: #14161A;
   --foreground: #F2F1EE;
   --surface: #1C1F24;
@@ -147,7 +147,7 @@
   height: 1px;
 }
 
-/* Numeric / data styling — kept subtle; Inter has tabular figures built in.
+/* Numeric / data styling -- kept subtle; Inter has tabular figures built in.
    Use .numeric on actual numeric stats where tabular alignment helps. */
 .numeric {
   font-variant-numeric: tabular-nums;

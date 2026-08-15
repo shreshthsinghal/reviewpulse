@@ -83,7 +83,7 @@ export function EmailView({ result, onBack }: Props) {
           body: email.body,
         }),
       });
-      // Safe JSON parse — don't throw "Unexpected token" on non-JSON responses.
+      // Safe JSON parse -- don't throw "Unexpected token" on non-JSON responses.
       const rawText = await res.text();
       let data: any = null;
       if (rawText) {
@@ -96,7 +96,7 @@ export function EmailView({ result, onBack }: Props) {
       if (!res.ok) {
         if (res.status === 501) {
           setSentStatus(
-            "Send is not configured on this deployment (EMAIL_API_KEY missing). Use Copy or Download instead — both satisfy the deliverable."
+            "Send is not configured on this deployment (EMAIL_API_KEY missing). Use Copy or Download instead -- both satisfy the deliverable."
           );
         } else {
           setSentStatus(`error: ${data?.error ?? "send failed"}`);
@@ -133,7 +133,7 @@ export function EmailView({ result, onBack }: Props) {
         <div className="space-y-4">
           <div>
             <Label htmlFor="to" className="text-xs text-muted-foreground">
-              To (your email / alias — self-send only)
+              To (your email / alias -- self-send only)
             </Label>
             <Input
               id="to"
@@ -231,7 +231,7 @@ export function EmailView({ result, onBack }: Props) {
               }`}
             >
               {sentStatus === "sent"
-                ? "Email sent — check your inbox."
+                ? "Email sent -- check your inbox."
                 : sentStatus.startsWith("error:")
                 ? sentStatus.slice(6)
                 : sentStatus}

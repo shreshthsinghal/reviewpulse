@@ -1,17 +1,17 @@
-// ReviewPulse — pipeline API.
+// ReviewPulse -- pipeline API.
 // POST /api/pipeline
 // Body: { input: AppInput }
 // Returns: PipelineResult (with all 4 stage outputs).
 //
 // This is the single orchestration endpoint for the 4-stage pipeline:
-//   1. Import — fetch reviews (Play Store / App Store / PDF / image / sample)
-//   2. Group  — PII scrub + theme classification
-//   3. Note   — generate weekly note (≤250w, 3+3+3)
-//   4. Email  — draft subject + body
+//   1. Import -- fetch reviews (Play Store / App Store / PDF / image / sample)
+//   2. Group  -- PII scrub + theme classification
+//   3. Note   -- generate weekly note (<=250w, 3+3+3)
+//   4. Email  -- draft subject + body
 //
 // All four stages run server-side. The LLM is invoked via the z-ai-web-dev-sdk.
 // If the LLM key is not set OR live fetching fails, we fall back to the bundled
-// sample dataset (per spec §5.3) and say so in the response meta.
+// sample dataset (per spec S5.3) and say so in the response meta.
 
 import { NextRequest, NextResponse } from "next/server";
 import type {
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   };
 
   // ---------------------------------------------------------------- 1. Import
-  setStage("import", { status: "active", message: "Fetching reviews…" });
+  setStage("import", { status: "active", message: "Fetching reviews..." });
   let reviews: Review[] = [];
   let usedFallback = false;
   let fallbackReason: string | undefined;
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
     if (input.kind === "groww_default") {
       reviews = getSampleGrowwReviews();
     } else {
-      // for non-default apps, no fallback — surface the error
+      // for non-default apps, no fallback -- surface the error
       setStage("import", {
         status: "error",
         message: fallbackReason,
@@ -171,13 +171,13 @@ export async function POST(req: NextRequest) {
       message:
         usedFallback
           ? `Live fetch failed and no fallback available: ${fallbackReason}`
-          : "No reviews found in the last 8–12 weeks for this source.",
+          : "No reviews found in the last 8-12 weeks for this source.",
     });
     return NextResponse.json(
       {
         error: usedFallback
           ? `Live fetch failed and no fallback available. Reason: ${fallbackReason}`
-          : "No reviews found in the last 8–12 weeks.",
+          : "No reviews found in the last 8-12 weeks.",
       },
       { status: 422 }
     );
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
   });
 
   // ---------------------------------------------------------------- 2. Group
-  setStage("group", { status: "active", message: "Scrubbing PII + classifying themes…" });
+  setStage("group", { status: "active", message: "Scrubbing PII + classifying themes..." });
   const scrubbed = scrubReviews(reviews);
   let themeList: string[] = [];
   let classified: Review[] = scrubbed;
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
       const msg = (err as Error).message ?? "classification failed";
       setStage("group", {
         status: "done",
-        message: `Themes unavailable — using rating-based fallback.`,
+        message: `Themes unavailable -- using rating-based fallback.`,
         detail: `Classifier error: ${msg}`,
       });
       // Simple fallback: tag by rating bucket. Better than "Other" for all.
@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
   });
 
   // ---------------------------------------------------------------- 3. Note
-  setStage("note", { status: "active", message: "Generating weekly note…" });
+  setStage("note", { status: "active", message: "Generating weekly note..." });
   const dateRange = defaultDateRange();
   let note;
   try {
@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
     note = {
       appName,
       dateRange,
-      markdown: `## Top Themes\n${themes.slice(0, 3).map((t) => `- ${t.theme} (${Math.round(t.share * 100)}%, ${t.count} reviews, avg ${t.avgRating}★)`).join("\n")}\n\n## What Users Are Saying\n${classified.slice(0, 3).map((r) => `- (${r.rating}★): "${r.text.slice(0, 140)}"`).join("\n")}\n\n## Action Ideas\n- Review the top theme above with the product team\n- Investigate the lowest-rated reviews for specific issues\n- Confirm the date range covers the most recent week\n\n<!-- Note: LLM note generation failed (${msg}). Showing structured fallback. -->`,
+      markdown: `## Top Themes\n${themes.slice(0, 3).map((t) => `- ${t.theme} (${Math.round(t.share * 100)}%, ${t.count} reviews, avg ${t.avgRating}*)`).join("\n")}\n\n## What Users Are Saying\n${classified.slice(0, 3).map((r) => `- (${r.rating}*): "${r.text.slice(0, 140)}"`).join("\n")}\n\n## Action Ideas\n- Review the top theme above with the product team\n- Investigate the lowest-rated reviews for specific issues\n- Confirm the date range covers the most recent week\n\n<!-- Note: LLM note generation failed (${msg}). Showing structured fallback. -->`,
       wordCount: 0,
       topThemes: themes.slice(0, 3).map((t) => t.theme),
       quotes: classified.slice(0, 3).map((r) => ({
@@ -264,11 +264,11 @@ export async function POST(req: NextRequest) {
   }
   setStage("note", {
     status: "done",
-    message: `Note generated — ${note.wordCount} words.`,
+    message: `Note generated -- ${note.wordCount} words.`,
   });
 
   // ---------------------------------------------------------------- 4. Email
-  setStage("email", { status: "active", message: "Drafting email…" });
+  setStage("email", { status: "active", message: "Drafting email..." });
   let email;
   try {
     email = await draftEmail(note);

@@ -14,9 +14,9 @@ const STAGE_FACTS: Record<string, string> = {
   import:
     "Fetching public reviews from Play Store + App Store listings. We never touch authenticated endpoints.",
   group:
-    "Stripping PII deterministically (emails, phones, IDs, handles), then classifying each review into one of ≤5 themes via LLM.",
+    "Stripping PII deterministically (emails, phones, IDs, handles), then classifying each review into one of <=5 themes via LLM.",
   note:
-    "Drafting the weekly one-pager: top 3 themes, 3 real PII-scrubbed quotes, 3 concrete action ideas — under 250 words.",
+    "Drafting the weekly one-pager: top 3 themes, 3 real PII-scrubbed quotes, 3 concrete action ideas -- under 250 words.",
   email:
     "Writing a subject + body, then running a second LLM pass to verify no residual PII in the 3 selected quotes.",
 };
@@ -35,13 +35,13 @@ export function ProcessingView({ stages, appName }: Props) {
         className="text-center"
       >
         <div className="text-xs text-[var(--primary)]">
-          Pipeline running · {appName}
+          Pipeline running | {appName}
         </div>
         <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
           Building your weekly pulse
         </h1>
         <p className="mt-3 text-muted-foreground">
-          Four stages, each shown as it happens. This isn&apos;t a spinner —
+          Four stages, each shown as it happens. This isn&apos;t a spinner --
           it&apos;s the product explaining itself.
         </p>
       </motion.div>
@@ -59,7 +59,7 @@ export function ProcessingView({ stages, appName }: Props) {
         </div>
       </div>
 
-      {/* Editorial pulse animation — the "signal"*/}
+      {/* Editorial pulse animation -- the "signal"*/}
       <div className="mt-8 flex items-center justify-center gap-1.5">
         {[0, 1, 2, 3, 4].map((i) => (
           <motion.div
