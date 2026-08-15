@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Review, ThemeBreakdown } from "@/lib/pipeline/types";
 import { generateWeeklyNote, defaultDateRange } from "@/lib/pipeline/note";
+import { hasLLMKey, isSandboxCredentials } from "@/lib/pipeline/llm";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;
@@ -25,13 +26,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing reviews" }, { status: 400 });
   }
 
-  try {
-    const note = await generateWeeklyNote(reviews, themes, appName, dateRange);
-    return NextResponse.json({ note });
-  } catch (err) {
-    const msg = (err as Error).message ?? "note generation failed";
-    // Structured fallback
-    const fallbackNote = {
+  const canCallLLM = await hasLLMKey();
+  const useRealLLM = canCallLLM && !isSandboxCredentials();
+
+  // Build a structured fallback note from the raw data -- used when LLM is
+  // unavailable OR when the LLM call fails (rate limit, timeout, etc.).
+  const buildFallbackNote = (warning: string) => ({
+    note: {
       appName,
       dateRange,
       markdown: `## Top Themes\n${themes.slice(0, 3).map((t) => `- ${t.theme} (${Math.round(t.share * 100)}%, ${t.count} reviews, avg ${t.avgRating} stars)`).join("\n")}\n\n## What Users Are Saying\n${reviews.slice(0, 3).map((r) => `- (${r.rating} stars): "${r.text.slice(0, 140)}"`).join("\n")}\n\n## Action Ideas\n- Review the top theme above with the product team\n- Investigate the lowest-rated reviews for specific issues\n- Confirm the date range covers the most recent week`,
@@ -47,7 +48,24 @@ export async function POST(req: NextRequest) {
         { text: "Investigate the lowest-rated reviews for specific issues", theme: "Mixed" },
         { text: "Confirm the date range covers the most recent week", theme: "Mixed" },
       ],
-    };
-    return NextResponse.json({ note: fallbackNote, warning: `LLM note generation failed (${msg}). Showing structured fallback.` });
+    },
+    warning,
+  });
+
+  if (!useRealLLM) {
+    const warning = isSandboxCredentials()
+      ? "Using structured fallback note (sandbox LLM credentials can't be used from Vercel). Set your own GLM_API_KEY to enable LLM-generated notes."
+      : "Using structured fallback note (GLM_API_KEY not set). Set GLM_API_KEY to enable LLM-generated notes.";
+    return NextResponse.json(buildFallbackNote(warning));
+  }
+
+  try {
+    const note = await generateWeeklyNote(reviews, themes, appName, dateRange);
+    return NextResponse.json({ note });
+  } catch (err) {
+    const msg = (err as Error).message ?? "note generation failed";
+    return NextResponse.json(
+      buildFallbackNote(`LLM note generation failed (${msg}). Showing structured fallback.`)
+    );
   }
 }

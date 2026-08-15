@@ -11,7 +11,7 @@ import {
   getThemeLegend,
   isGrowwLegend,
 } from "@/lib/pipeline/themes";
-import { hasLLMKey } from "@/lib/pipeline/llm";
+import { hasLLMKey, isSandboxCredentials } from "@/lib/pipeline/llm";
 
 export const runtime = "nodejs";
 export const maxDuration = 10;
@@ -30,11 +30,13 @@ export async function POST(req: NextRequest) {
   }
 
   const canCallLLM = await hasLLMKey();
+  const useRealLLM = canCallLLM && !isSandboxCredentials();
   const scrubbed = scrubReviews(reviews);
   let themeList: string[] = [];
   let classified: Review[] = scrubbed;
+  let warning: string | undefined;
 
-  if (canCallLLM) {
+  if (useRealLLM) {
     try {
       const forced = isGrowwLegend(appName) ? getThemeLegend(appName) : undefined;
       const cls = await classifyReviews(scrubbed, appName, forced);
@@ -47,20 +49,29 @@ export async function POST(req: NextRequest) {
         theme: r.rating >= 4 ? "Positive feedback" : r.rating <= 2 ? "Critical feedback" : "Mixed feedback",
       }));
       themeList = ["Positive feedback", "Critical feedback", "Mixed feedback", "Other"];
-      return NextResponse.json({
-        reviews: classified,
-        themes: themeList,
-        themeBreakdown: buildThemeBreakdown(classified),
-        warning: `Themes unavailable -- using rating-based fallback. Classifier error: ${msg}`,
-      });
+      warning = `Themes unavailable -- using rating-based fallback. Classifier error: ${msg}`;
     }
   } else {
-    themeList = Array.from(new Set(scrubbed.map((r) => r.theme ?? "Other"))).slice(0, 5);
+    // No real LLM available -- use the pre-existing theme tags from the
+    // sample data (if Groww default) or rating-based fallback.
+    if (scrubbed.some((r) => r.theme && r.theme !== "Other")) {
+      themeList = Array.from(new Set(scrubbed.map((r) => r.theme ?? "Other"))).slice(0, 5);
+    } else {
+      classified = scrubbed.map((r) => ({
+        ...r,
+        theme: r.rating >= 4 ? "Positive feedback" : r.rating <= 2 ? "Critical feedback" : "Mixed feedback",
+      }));
+      themeList = ["Positive feedback", "Critical feedback", "Mixed feedback", "Other"];
+      warning = isSandboxCredentials()
+        ? "Using pre-tagged themes from sample data (sandbox LLM credentials can't be used from Vercel)."
+        : "Using rating-based themes (GLM_API_KEY not set).";
+    }
   }
 
   return NextResponse.json({
     reviews: classified,
     themes: themeList,
     themeBreakdown: buildThemeBreakdown(classified),
+    warning,
   });
 }

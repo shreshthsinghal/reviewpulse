@@ -12,7 +12,7 @@ import {
   parseImageReviews,
 } from "@/lib/pipeline/importers";
 import { getSampleGrowwReviews } from "@/lib/pipeline/sample-data";
-import { hasLLMKey } from "@/lib/pipeline/llm";
+import { hasLLMKey, isSandboxCredentials } from "@/lib/pipeline/llm";
 import { GROWW_DEFAULT_APP } from "@/lib/pipeline/constants";
 
 export const runtime = "nodejs";
@@ -31,11 +31,26 @@ export async function POST(req: NextRequest) {
   }
 
   const canCallLLM = await hasLLMKey();
+
+  // Detect sandbox-only credentials and surface a clear error for non-default
+  // apps. The sandbox credentials (apiKey="Z.ai" + session JWT) only work
+  // from this sandbox's network -- Vercel's functions can't reach
+  // internal-api.z.ai, so every LLM call times out at 10s.
+  if (canCallLLM && isSandboxCredentials() && input.kind !== "groww_default") {
+    return NextResponse.json(
+      {
+        error:
+          "The credentials currently set on this deployment are session-scoped sandbox tokens (tied to the chat session that built this app). They only work from the sandbox network, not from Vercel. To enable the alternate-app flow on Vercel, get your own GLM API key from https://z.ai/ -- sign in, generate an API key, then set GLM_API_KEY (and GLM_BASE_URL=https://api.z.ai/api/paas/v4) as Vercel env vars and redeploy. The Groww default flow still works because it uses bundled sample data (no LLM required).",
+      },
+      { status: 503 }
+    );
+  }
+
   if (!canCallLLM && input.kind !== "groww_default") {
     return NextResponse.json(
       {
         error:
-          "GLM_API_KEY is not set on this deployment. The Groww default flow uses bundled sample data, but the alternate-app flow needs an LLM for classification and note generation. Add GLM_API_KEY as a Vercel env var, redeploy, then try again.",
+          "GLM_API_KEY is not set on this deployment. The Groww default flow uses bundled sample data, but the alternate-app flow needs an LLM for classification and note generation. Add GLM_API_KEY as a Vercel env var (get one from https://z.ai/), redeploy, then try again.",
       },
       { status: 503 }
     );
@@ -49,14 +64,19 @@ export async function POST(req: NextRequest) {
   try {
     if (input.kind === "groww_default") {
       appName = GROWW_DEFAULT_APP;
-      if (canCallLLM) {
+      // Only attempt live Play Store fetching if we have REAL API credentials
+      // (not sandbox session tokens, which can't reach the LLM from Vercel).
+      // Otherwise go straight to bundled sample data.
+      if (canCallLLM && !isSandboxCredentials()) {
         const r = await importGrowwDefault();
         reviews = r.reviews;
         usedFallback = r.usedFallback;
         fallbackReason = r.fallbackReason;
       } else {
         usedFallback = true;
-        fallbackReason = "GLM_API_KEY not set in this environment.";
+        fallbackReason = isSandboxCredentials()
+          ? "Using bundled sample data (sandbox credentials can't reach the LLM from Vercel -- the Groww default flow falls back to bundled sample data, which requires no LLM)."
+          : "GLM_API_KEY not set in this environment.";
       }
       if (reviews.length < 5) {
         reviews = getSampleGrowwReviews();

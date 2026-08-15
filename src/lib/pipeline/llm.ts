@@ -50,6 +50,15 @@ export async function hasLLMKey(): Promise<boolean> {
   return false;
 }
 
+/** Detect if the configured credentials are the sandbox-only session token
+ * (which won't work from Vercel's network). Returns true if the credentials
+ * look like the sandbox's internal-only ones. */
+export function isSandboxCredentials(): boolean {
+  // The sandbox config uses apiKey="Z.ai" and a JWT token tied to a chat_id.
+  // Real Z.ai API keys start with a long alphanumeric string.
+  return apiKey === "Z.ai" || baseUrl.includes("internal-api.z.ai");
+}
+
 /** Synchronous version -- only checks env var. Use the async version when
  * possible. */
 export function hasLLMKeySync(): boolean {
