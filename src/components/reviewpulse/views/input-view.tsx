@@ -218,11 +218,24 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
                         {r.appId}
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {r.developer}
-                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      {r.score != null && (
+                        <span className="text-xs font-semibold text-foreground">
+                          {r.score.toFixed(1)} stars
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {r.developer}
+                      </span>
+                    </div>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {!searching && !error && searchQ.trim().length >= 2 && results.length === 0 && (
+              <div className="mt-3 rounded-md border border-border/60 bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
+                No results found. Try a more specific app name.
               </div>
             )}
 

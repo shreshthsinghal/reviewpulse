@@ -67,6 +67,22 @@ export async function POST(req: NextRequest) {
   // credentials are treated as "LLM available".
   const canCallLLM = await hasLLMKey();
 
+  // For non-default apps (playstore_search / pdf / image), the LLM is
+  // genuinely required: theme classification, note generation, email draft,
+  // and PII verification all need it. If it's not available, surface a clear
+  // error before the user waits for a pipeline that will produce junk.
+  // (The Groww default flow falls back to the bundled sample dataset, so
+  // it can still demo without LLM -- but non-default apps have no fallback.)
+  if (!canCallLLM && input.kind !== "groww_default") {
+    return NextResponse.json(
+      {
+        error:
+          "GLM_API_KEY is not set on this deployment. The Play Store search works (it uses a public listing scraper), but classification, note generation, and email drafting all require an LLM. Add GLM_API_KEY as a Vercel env var, redeploy, then try again.",
+      },
+      { status: 503 }
+    );
+  }
+
   const stages: PipelineStageState[] = [
     stage("import", "Import"),
     stage("group", "Group"),
