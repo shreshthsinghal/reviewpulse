@@ -24,11 +24,11 @@ export function getThemeLegend(appName: string): string[] {
   return []; // dynamic -- must be discovered from data
 }
 
-// Maximum number of reviews we send to the LLM classifier. 20 most-recent
-// reviews is enough signal for a weekly pulse -- classifying more would (a)
-// risk Vercel Hobby tier's 10s function timeout and (b) not improve the note
-// quality since we only surface 3 themes anyway.
-const MAX_REVIEWS_TO_CLASSIFY = 20;
+// Maximum number of reviews we send to the LLM classifier. 12 most-recent
+// reviews is enough signal for a weekly pulse -- we only surface 3 themes and
+// 3 quotes, so classifying more doesn't help. Kept low because Vercel Hobby
+// tier caps functions at 10s, and the LLM call needs to fit within that.
+const MAX_REVIEWS_TO_CLASSIFY = 12;
 
 // Classify reviews into themes using LLM. If the legend is empty (dynamic case),
 // we ask the LLM to PROPOSE up to 5 themes AND classify in a SINGLE call --
@@ -106,7 +106,7 @@ Output STRICT JSON ONLY in this format:
 Never invent a theme outside your proposed list. Base assignments only on the review text and title provided.`;
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-plus",
+      model: "glm-4-flash",
       messages: [
         { role: "system", content: sys },
         {
@@ -220,7 +220,7 @@ Rules:
 Output: JSON array of {id, theme} pairs, nothing else.`;
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-plus",
+      model: "glm-4-flash",
       messages: [
         { role: "system", content: sys },
         {
@@ -284,7 +284,7 @@ Rules:
 Output: JSON object {"themes": ["...", "..."]} nothing else.`;
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-plus",
+      model: "glm-4-flash",
       messages: [
         { role: "system", content: sys },
         { role: "user", content: JSON.stringify(sample) },

@@ -357,7 +357,7 @@ async function llmExtractReviewsFromText(
     "Do NOT include usernames, emails, phone numbers, or any PII. If a field is unreadable, return null. If no reviews are visible, return [].";
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-plus",
+      model: "glm-4-flash",
       messages: [
         { role: "system", content: sys },
         {

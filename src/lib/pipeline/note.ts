@@ -101,7 +101,7 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
 
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-plus",
+      model: "glm-4-flash",
       messages: [
         { role: "system", content: sys },
         { role: "user", content: JSON.stringify(userPayload) },

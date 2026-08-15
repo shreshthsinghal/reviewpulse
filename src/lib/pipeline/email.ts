@@ -14,7 +14,7 @@ Output: STRICT JSON ONLY of the form: {"subject": "...", "body": "..."}
 Subject under ${EMAIL_SUBJECT_LIMIT} characters. Body should be email-formatted (short lines, no markdown syntax, plain text with line breaks), professional and neutral in tone, and must not introduce any PII. Do not restate every line of the note -- present it cleanly as the email content. Sign off as "ReviewPulse" on its own line at the end of the body.`;
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-plus",
+      model: "glm-4-flash",
       messages: [
         { role: "system", content: sys },
         { role: "user", content: note.markdown },

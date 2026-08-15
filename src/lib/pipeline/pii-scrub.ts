@@ -73,7 +73,7 @@ export async function llmVerifyQuotes(
     "When in doubt, prefer 'keep' -- over-redaction is also a quality problem.";
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-plus",
+      model: "glm-4-flash",
       messages: [
         { role: "system", content: sys },
         {
