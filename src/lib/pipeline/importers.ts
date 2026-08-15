@@ -407,15 +407,16 @@ export async function importGrowwDefault(): Promise<{
   usedFallback: boolean;
   fallbackReason?: string;
 }> {
-  const [ps, as] = await Promise.all([
-    fetchPlayStoreReviews(GROWW_PLAYSTORE_ID, "Groww"),
-    fetchAppStoreReviews(GROWW_APPSTORE_ID, "Groww"),
-  ]);
-  const combined = [...ps.reviews, ...as.reviews];
-  if (combined.length < 5) {
-    const reason = [ps.fallbackReason, as.fallbackReason].filter(Boolean).join(" | ") ||
-      "Live fetch returned too few reviews.";
-    return { reviews: [], usedFallback: true, fallbackReason: reason };
+  // App Store RSS is often slow or returns 0 entries for Groww; skip it to
+  // keep the pipeline within Vercel Hobby tier's 10s function timeout.
+  // Play Store alone returns plenty of recent reviews.
+  const ps = await fetchPlayStoreReviews(GROWW_PLAYSTORE_ID, "Groww", { maxPages: 2 });
+  if (ps.reviews.length < 5) {
+    return {
+      reviews: [],
+      usedFallback: true,
+      fallbackReason: ps.fallbackReason ?? "Live fetch returned too few reviews.",
+    };
   }
-  return { reviews: combined, usedFallback: false };
+  return { reviews: ps.reviews, usedFallback: false };
 }

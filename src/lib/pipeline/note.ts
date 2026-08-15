@@ -118,15 +118,23 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
   const { quotes, actions } = parseNoteStructure(markdown, candidates);
 
   // LLM PII verification pass on the final 3 quotes (spec S4.3 step 2).
-  const verified = await llmVerifyQuotes(quotes);
-  const safeQuotes: Quote[] = [];
-  for (let i = 0; i < verified.length; i++) {
-    if (verified[i]) safeQuotes.push(verified[i] as Quote);
-    else if (candidates[safeQuotes.length + i]) {
-      // replace with next-best candidate and re-scrub deterministically
-      const fallback = candidates[safeQuotes.length + i];
-      safeQuotes.push(fallback);
+  // We wrap this in a try/catch so that if it fails (network, rate limit,
+  // Vercel function timeout) we fall back to the deterministic-scrubbed
+  // quotes rather than crashing the whole pipeline.
+  let safeQuotes: Quote[] = quotes.slice(0, NOTE_QUOTES);
+  try {
+    const verified = await llmVerifyQuotes(quotes);
+    const picked: Quote[] = [];
+    for (let i = 0; i < verified.length; i++) {
+      if (verified[i]) picked.push(verified[i] as Quote);
+      else if (candidates[picked.length + i]) {
+        // replace with next-best candidate and re-scrub deterministically
+        picked.push(candidates[picked.length + i]);
+      }
     }
+    if (picked.length > 0) safeQuotes = picked;
+  } catch (err) {
+    console.warn("[note] LLM PII verification failed, using deterministic-scrubbed quotes:", (err as Error).message);
   }
 
   return {

@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      const r = await fetchPlayStoreReviews(input.appId, appName);
+      const r = await fetchPlayStoreReviews(input.appId, appName, { maxPages: 2 });
       reviews = r.reviews;
       usedFallback = r.usedFallback;
       fallbackReason = r.fallbackReason;
