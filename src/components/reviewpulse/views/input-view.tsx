@@ -52,7 +52,18 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
           `/api/playstore-search?q=${encodeURIComponent(searchQ)}`,
           { signal: searchAbort.current.signal }
         );
-        const data = await res.json();
+        // Read text first, parse JSON safely — avoids "Unexpected token" if
+        // the server returns HTML or empty body.
+        const rawText = await res.text();
+        let data: any = null;
+        if (rawText) {
+          try {
+            data = JSON.parse(rawText);
+          } catch {
+            // Non-JSON response — surface as error
+            data = { error: `Server returned non-JSON response (${res.status})` };
+          }
+        }
         if (data?.error) {
           setError(data.error);
           setResults([]);

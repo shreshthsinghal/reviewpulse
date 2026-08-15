@@ -83,7 +83,16 @@ export function EmailView({ result, onBack }: Props) {
           body: email.body,
         }),
       });
-      const data = await res.json();
+      // Safe JSON parse — don't throw "Unexpected token" on non-JSON responses.
+      const rawText = await res.text();
+      let data: any = null;
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = { error: `Server returned non-JSON response (${res.status})` };
+        }
+      }
       if (!res.ok) {
         if (res.status === 501) {
           setSentStatus(

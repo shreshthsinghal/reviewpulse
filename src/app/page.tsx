@@ -131,7 +131,22 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input: appInput }),
       });
-      const data = await res.json();
+      // Read the body as text first, then try to parse as JSON. If the server
+      // returned a non-JSON response (HTML error page, plain text, empty body,
+      // streaming chunk, etc.) we surface a clear error instead of throwing
+      // "Unexpected token" inside res.json().
+      const rawText = await res.text();
+      let data: any = null;
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          // Not JSON — surface the raw text (truncated) as the error.
+          throw new Error(
+            `Pipeline returned a non-JSON response (status ${res.status}): ${rawText.slice(0, 200)}`
+          );
+        }
+      }
       if (!res.ok) {
         throw new Error(data?.error || `Pipeline failed (${res.status})`);
       }
@@ -139,8 +154,24 @@ export default function Home() {
       setStages((data as PipelineResult).stages);
       setView("dashboard");
     } catch (e: any) {
-      setError(e.message || "Pipeline failed");
-      setView("input");
+      // Network errors, abort errors, parse errors, or thrown errors above.
+      let msg = e?.message || String(e) || "Pipeline failed";
+      // Friendlier messages for common failure modes.
+      if (/429|too many requests/i.test(msg)) {
+        msg =
+          "The LLM API is rate-limiting us. Please wait ~30 seconds and try again — the pipeline makes several LLM calls in sequence.";
+      } else if (/timeout|timed out|aborted/i.test(msg)) {
+        msg =
+          "The pipeline timed out. This usually means the LLM API is slow or rate-limiting us. Wait a minute and try again.";
+      } else if (/non-json/i.test(msg)) {
+        msg =
+          "The server returned an unexpected response (likely a function timeout on Vercel — the pipeline takes 20-60s which exceeds Hobby tier's 10s limit; deploy on Vercel Pro with maxDuration=300, or run locally).";
+      }
+      setError(msg);
+      // Stay on a sensible view: if the user came from the Groww default CTA,
+      // bounce them to the input view so they can retry / try a different
+      // source. If they were already on the input view, stay there.
+      setView((prev) => (prev === "processing" ? "input" : prev));
     } finally {
       setBusy(false);
     }
