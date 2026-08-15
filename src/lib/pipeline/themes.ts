@@ -33,9 +33,9 @@ export function getThemeLegend(appName: string): string[] {
 const MAX_REVIEWS_TO_CLASSIFY = 30;
 
 // Classify reviews into themes using LLM. If the legend is empty (dynamic case),
-// we first ask the LLM to PROPOSE up to 5 themes from the data, then classify.
-// We chunk large sets so each LLM call stays under ~30 reviews (payload size
-// + rate limit friendly) and we cap at MAX_REVIEWS_TO_CLASSIFY most recent.
+// we ask the LLM to PROPOSE up to 5 themes AND classify in a SINGLE call --
+// this is critical for Vercel Hobby tier where functions are capped at 10s.
+// Each separate LLM call adds 2-4 seconds, so combining them saves ~3s.
 //
 // Spec S4.4 mandates a fixed legend for Groww. However, if >80% of reviews
 // land in "Other" using that legend (signal: the legend doesn't match what
@@ -49,12 +49,16 @@ export async function classifyReviews(
   if (reviews.length === 0) return { reviews: [], themes: [] };
 
   let themes = forcedLegend ?? getThemeLegend(appName);
-  if (themes.length === 0) {
-    themes = await proposeDynamicThemes(reviews, appName);
-  }
-  themes = capThemes(themes);
+  let result: { reviews: Review[]; themes: string[] };
 
-  const result = await classifyWithLegend(reviews, appName, themes);
+  if (themes.length === 0) {
+    // Dynamic case: propose + classify in one call.
+    result = await proposeAndClassify(reviews, appName);
+    themes = result.themes;
+  } else {
+    themes = capThemes(themes);
+    result = await classifyWithLegend(reviews, appName, themes);
+  }
 
   // If we used a forced legend (e.g. Groww's) and >80% landed in "Other",
   // the legend doesn't fit the actual review content. Fall back to dynamic
@@ -65,21 +69,97 @@ export async function classifyReviews(
     console.warn(
       `[themes] fixed legend produced ${Math.round(otherShare * 100)}% "Other" -- falling back to dynamic themes for ${appName}`
     );
-    const dynamicThemes = await proposeDynamicThemes(reviews, appName);
-    const capped = capThemes(dynamicThemes);
-    if (capped.length > 1) {
-      const dynamicResult = await classifyWithLegend(reviews, appName, capped);
+    try {
+      const dynamicResult = await proposeAndClassify(reviews, appName);
       const dynamicOtherShare =
         dynamicResult.reviews.filter((r) => (r.theme ?? "Other") === "Other").length /
         Math.max(dynamicResult.reviews.length, 1);
-      // Only use dynamic result if it's meaningfully better.
       if (dynamicOtherShare < otherShare) {
         return dynamicResult;
       }
+    } catch (err) {
+      console.warn("[themes] dynamic fallback failed:", (err as Error).message);
     }
   }
 
   return result;
+}
+
+// Single-call theme proposal + classification. Asks the LLM to look at the
+// reviews, propose up to 5 themes appropriate to the content, AND classify
+// each review into one of those themes -- all in one response. This is much
+// faster than the two-call approach for Vercel Hobby tier's 10s function cap.
+async function proposeAndClassify(
+  reviews: Review[],
+  appName: string
+): Promise<{ reviews: Review[]; themes: string[] }> {
+  const sorted = [...reviews].sort((a, b) => b.date.localeCompare(a.date));
+  const toClassify = sorted.slice(0, MAX_REVIEWS_TO_CLASSIFY);
+  const zai = await getLLM();
+  const sys = `You are a product analyst classifying app store reviews for ${appName}.
+
+Step 1: Look at the reviews and propose up to 5 themes that fit what users actually mention. Use short, descriptive labels (1-3 words, Title Case). Always include "Other" as one of the themes.
+
+Step 2: Assign each review to exactly one of your proposed themes. Try to find the BEST-fitting theme before falling back to "Other". "Other" should be used for fewer than 25% of reviews.
+
+Output STRICT JSON ONLY in this format:
+{"themes": ["Theme1", "Theme2", "Theme3", "Theme4", "Other"], "assignments": [{"id": "review-id-1", "theme": "Theme1"}, {"id": "review-id-2", "theme": "Theme2"}]}
+
+Never invent a theme outside your proposed list. Base assignments only on the review text and title provided.`;
+  const resp = await withRetry(() =>
+    zai.chat.completions.create({
+      model: "glm-4-plus",
+      messages: [
+        { role: "system", content: sys },
+        {
+          role: "user",
+          content: JSON.stringify(
+            toClassify.map((r) => ({
+              id: r.id,
+              rating: r.rating,
+              title: r.title,
+              text: r.text.slice(0, 300),
+            }))
+          ),
+        },
+      ],
+      temperature: 0.2,
+    })
+  );
+  const content = resp?.choices?.[0]?.message?.content ?? "{}";
+  let parsed: any = {};
+  try {
+    const cleaned = content
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/i, "")
+      .trim();
+    parsed = JSON.parse(cleaned);
+  } catch {
+    parsed = {};
+  }
+  let themes: string[] = Array.isArray(parsed?.themes)
+    ? parsed.themes.filter((x: any) => typeof x === "string" && x.trim())
+    : [];
+  if (themes.length === 0) themes = ["Other"];
+  themes = capThemes(themes);
+
+  const themeById = new Map<string, string>();
+  if (Array.isArray(parsed?.assignments)) {
+    for (const a of parsed.assignments) {
+      if (a && typeof a.id === "string" && typeof a.theme === "string") {
+        let t = a.theme;
+        const matched = themes.find((th) => th.toLowerCase() === t.toLowerCase());
+        t = matched ?? "Other";
+        themeById.set(a.id, t);
+      }
+    }
+  }
+
+  const classified = reviews.map((r) => ({
+    ...r,
+    theme: themeById.get(r.id) ?? r.theme ?? "Other",
+  }));
+  return { reviews: classified, themes };
 }
 
 async function classifyWithLegend(
