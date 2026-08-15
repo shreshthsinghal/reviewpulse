@@ -49,7 +49,7 @@ cp .env.example .env   # then edit .env
 bun run dev
 ```
 
-Open <http://localhost:3000>. Click **"Analyze Groww's Weekly Pulse"** -- that's
+Open <https://my-project-delta-cyan-59.vercel.app/>. Click **"Analyze Groww's Weekly Pulse"** -- that's
 the zero-input default flow; the rest of the pipeline runs end-to-end.
 
 ### Production build
