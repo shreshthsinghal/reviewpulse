@@ -1,7 +1,5 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-node_modules
+/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -30,25 +28,45 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env*.local
+.env.development
+.env.production
+
+# ZAI SDK config (auto-loaded credentials)
+.z-ai-config
 
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-local-*
-.claude
-.z-ai-config
-*.log
-dev.log
-dev.out.log
-test
-prompt
 
+# dev log
+dev.log
 server.log
-# Skills directory
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# sandbox artifacts
+.zscripts/
+download/README.md
+
+# sandbox scaffolding (not part of the app)
+/tests/
+/upload/
+/examples/
+/mini-services/
+/db/
 /skills/
+/scripts/
+Caddyfile
+.zscripts/
+dev.log
+server.log

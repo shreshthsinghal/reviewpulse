@@ -127,7 +127,7 @@ export function DashboardView({
         className="mt-8 rounded-2xl border border-[var(--primary)]/30 bg-[var(--surface)] p-6 sm:p-8 shadow-sm"
       >
         <div className="flex items-baseline justify-between border-b border-border pb-3">
-          <div className="text-lg font-semibold">Weekly Note | <=250 words</div>
+          <div className="text-lg font-semibold">Weekly Note | {"<=250"} words</div>
           <div className="text-xs text-muted-foreground">
             {note.wordCount} words | {note.quotes.length} quotes | {note.actions.length} actions
           </div>

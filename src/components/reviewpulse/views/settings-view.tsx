@@ -46,7 +46,7 @@ export function SettingsView({ onBack, onRerun }: Props) {
           <div className="mt-3 space-y-3 text-sm text-muted-foreground leading-relaxed">
             <p>
               ReviewPulse runs a 4-stage pipeline:{" "}
-              <span className="text-foreground">Import  >  Group  >  Generate Note  >  Draft Email</span>.
+              <span className="text-foreground">Import {"->"} Group {"->"} Generate Note {"->"} Draft Email</span>.
               All four stages run server-side via Next.js API routes, with an
               LLM doing classification, summarization and drafting.
             </p>
@@ -60,13 +60,13 @@ export function SettingsView({ onBack, onRerun }: Props) {
               <li>
                 <strong>Group:</strong> runs a deterministic PII scrub (emails,
                 phones, IDs, handles, name patterns) and then LLM classifies each
-                review into one of <=5 themes. For Groww specifically, the fixed
+                review into one of {"<=5"} themes. For Groww specifically, the fixed
                 theme legend below is used; for other apps, themes are proposed
                 dynamically by the LLM from the actual review content.
               </li>
               <li>
                 <strong>Generate Note:</strong> drafts a weekly one-pager -- top 3
-                themes, 3 real PII-scrubbed quotes, 3 action ideas, <=250 words.
+                themes, 3 real PII-scrubbed quotes, 3 action ideas, {"<=250"} words.
                 A second LLM pass verifies no residual PII in the 3 selected
                 quotes.
               </li>

@@ -59,7 +59,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
               ReviewPulse ingests the last 8-12 weeks of public App Store &amp; Play
-              Store reviews, groups them into <=5 themes, drafts a <=250-word weekly
+              Store reviews, groups them into {"<=5"} themes, drafts a {"<=250"}-word weekly
               note with 3 real quotes &amp; 3 action ideas, and writes the email
               for you. No dashboards to dig through. No PII anywhere.
             </p>
@@ -85,7 +85,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground/80">
-              <span>4-stage pipeline | Import > Group > Note > Email</span>
+              <span>4-stage pipeline | Import {"->"} Group {"->"} Note {"->"} Email</span>
               <span className="hidden sm:inline"> - </span>
               <span>Public data only</span>
               <span className="hidden sm:inline"> - </span>
@@ -136,7 +136,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
 
             {/* Editorial accent */}
             <div className="absolute -bottom-3 -right-2 rotate-3 rounded-md border border-[var(--primary)]/30 bg-[var(--primary)]/5 px-3 py-1 text-xs text-[var(--primary)]">
-              <= 250 words | 3 themes | 3 quotes | 3 actions
+              {"<= 250"} words | 3 themes | 3 quotes | 3 actions
             </div>
           </motion.div>
         </motion.div>
