@@ -59,25 +59,33 @@ export function hasLLMKeySync(): boolean {
 // If GLM_API_KEY is set via env (Vercel), write a project-local .z-ai-config
 // with ALL the auth fields the SDK supports (apiKey, baseUrl, chatId, userId,
 // token) so the SDK's auto-loader picks them up. Idempotent.
-async function ensureLocalConfig() {
-  if (!apiKey) return; // fall back to /etc/.z-ai-config
-  const configPath = path.join(process.cwd(), ".z-ai-config");
+//
+// On Vercel serverless functions, the project directory is read-only, so we
+// write to /tmp/.z-ai-config instead. But the SDK only searches
+// <cwd>/.z-ai-config, ~/, and /etc/. So after writing to /tmp, we also need
+// to symlink or copy it to one of those paths. The simplest portable
+// solution: write to /tmp/.z-ai-config and set ZAI_CONFIG_PATH env to point
+// there. But the SDK doesn't read that env var -- so we instead instantiate
+// ZAI directly with the config object, bypassing the auto-loader entirely.
+async function ensureLocalConfig(): Promise<Record<string, string> | null> {
+  if (!apiKey) return null; // fall back to /etc/.z-ai-config
   const config: Record<string, string> = { apiKey, baseUrl };
   if (chatId) config.chatId = chatId;
   if (userId) config.userId = userId;
   if (token) config.token = token;
-  const desired = JSON.stringify(config);
+
+  // Also try writing to /tmp/.z-ai-config so the SDK auto-loader finds it
+  // if our direct-instantiation path below somehow fails.
   try {
-    const existing = await fs.readFile(configPath, "utf-8");
-    if (existing.trim() === desired.trim()) return;
+    const tmpPath = "/tmp/.z-ai-config";
+    await fs.writeFile(tmpPath, JSON.stringify(config), { mode: 0o600 });
+    // Also try writing to the cwd-relative path (works in non-serverless envs)
+    const cwdPath = path.join(process.cwd(), ".z-ai-config");
+    await fs.writeFile(cwdPath, JSON.stringify(config), { mode: 0o600 }).catch(() => {});
   } catch {
-    // file doesn't exist -- fall through and create it
+    // best-effort -- if write fails, we'll fall through to direct instantiation
   }
-  try {
-    await fs.writeFile(configPath, desired, { mode: 0o600 });
-  } catch {
-    // best-effort
-  }
+  return config;
 }
 
 let clientPromise: Promise<ZAI> | null = null;
@@ -85,7 +93,16 @@ let clientPromise: Promise<ZAI> | null = null;
 export async function getLLM(): Promise<ZAI> {
   if (!clientPromise) {
     clientPromise = (async () => {
-      await ensureLocalConfig();
+      const config = await ensureLocalConfig();
+      if (config) {
+        // Direct instantiation -- bypasses the SDK's auto-loader, which
+        // can't find /etc/.z-ai-config on Vercel serverless functions.
+        // ZAI constructor is private in the type defs but the runtime
+        // class accepts a config object directly.
+        const ZAIClass = ZAI as unknown as new (c: typeof config) => ZAI;
+        return new ZAIClass(config);
+      }
+      // No env vars -- let the SDK auto-load from /etc/.z-ai-config (works in sandbox)
       return ZAI.create();
     })();
   }
