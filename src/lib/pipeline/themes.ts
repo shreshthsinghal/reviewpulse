@@ -24,13 +24,11 @@ export function getThemeLegend(appName: string): string[] {
   return []; // dynamic -- must be discovered from data
 }
 
-// Maximum number of reviews we send to the LLM classifier. 30 most-recent
-// reviews is plenty of signal for a weekly pulse -- classifying all 300+ that
-// a popular app returns in 12 weeks would (a) blow through LLM rate limits
-// and (b) not improve the note quality since we only surface 3 themes anyway.
-// Kept at 30 so the pipeline can complete within Vercel Hobby tier's 10s
-// function timeout (one LLM call instead of 2+ chunks).
-const MAX_REVIEWS_TO_CLASSIFY = 30;
+// Maximum number of reviews we send to the LLM classifier. 20 most-recent
+// reviews is enough signal for a weekly pulse -- classifying more would (a)
+// risk Vercel Hobby tier's 10s function timeout and (b) not improve the note
+// quality since we only surface 3 themes anyway.
+const MAX_REVIEWS_TO_CLASSIFY = 20;
 
 // Classify reviews into themes using LLM. If the legend is empty (dynamic case),
 // we ask the LLM to PROPOSE up to 5 themes AND classify in a SINGLE call --

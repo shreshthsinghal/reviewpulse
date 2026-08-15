@@ -66,58 +66,39 @@ export default function Home() {
     }, 500);
   }
 
-  // Live stepper animation -- we simulate stage activation while the real
-  // /api/pipeline call is in flight. The server returns the final stages;
-  // this is just UX sugar to make the pipeline visibly progress. Timers
-  // are generous because real classification with chunking can take 20-30s
-  // for apps with many reviews (e.g. Spotify returns 300+).
-  React.useEffect(() => {
-    if (view !== "processing") return;
-    let cancelled = false;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(
-      setTimeout(() => {
-        if (cancelled) return;
-        setStages((s) =>
-          s.map((x) =>
-            x.id === "import" ? { ...x, status: "active", message: "Fetching reviews..." } : x
-          )
-        );
-      }, 100)
-    );
-    timers.push(
-      setTimeout(() => {
-        if (cancelled) return;
-        setStages((s) =>
-          s.map((x) =>
-            x.id === "group"
-              ? { ...x, status: "active", message: "Scrubbing PII + classifying themes..." }
-              : x.id === "import"
-              ? { ...x, status: "done", message: "Reviews imported." }
-              : x
-          )
-        );
-      }, 2500)
-    );
-    timers.push(
-      setTimeout(() => {
-        if (cancelled) return;
-        setStages((s) =>
-          s.map((x) =>
-            x.id === "note"
-              ? { ...x, status: "active", message: "Generating weekly note..." }
-              : x.id === "group"
-              ? { ...x, status: "done", message: "Themes identified." }
-              : x
-          )
-        );
-      }, 8000)
-    );
-    return () => {
-      cancelled = true;
-      timers.forEach(clearTimeout);
-    };
-  }, [view]);
+  // Stages update in real time as each API call completes (see runPipeline below).
+
+  // Helper: safe fetch + JSON parse. Returns { ok, status, data, error }.
+  async function safeFetchJson(url: string, body: any): Promise<{ ok: boolean; status: number; data: any; error?: string }> {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (e: any) {
+      return { ok: false, status: 0, data: null, error: `Network error: ${e?.message ?? e}` };
+    }
+    const rawText = await res.text();
+    let data: any = null;
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        return {
+          ok: false,
+          status: res.status,
+          data: null,
+          error: `Server returned a non-JSON response (status ${res.status}). This usually means the function timed out -- the pipeline takes 5-10s per stage which fits within Vercel's 10s Hobby tier limit, but a slow LLM response can push it over. Try again.`,
+        };
+      }
+    }
+    if (!res.ok) {
+      return { ok: false, status: res.status, data, error: data?.error || `Stage failed (${res.status})` };
+    }
+    return { ok: true, status: res.status, data };
+  }
 
   async function runPipeline(appInput: AppInput) {
     setBusy(true);
@@ -125,52 +106,100 @@ export default function Home() {
     setInput(appInput);
     setStages(INITIAL_STAGES);
     setView("processing");
+
+    // Helper to update one stage's status
+    const setStage = (id: PipelineStageState["id"], patch: Partial<PipelineStageState>) => {
+      setStages((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    };
+
     try {
-      const res = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: appInput }),
+      // ------------------------------------------------------------- Stage 1: Import
+      setStage("import", { status: "active", message: "Fetching reviews..." });
+      const importRes = await safeFetchJson("/api/pipeline-import", { input: appInput });
+      if (!importRes.ok) throw new Error(importRes.error);
+      const { reviews, appName, usedFallback, fallbackReason, reviewCount } = importRes.data;
+      setStage("import", {
+        status: "done",
+        message: usedFallback
+          ? `Imported ${reviewCount} reviews (sample fallback).`
+          : `Imported ${reviewCount} reviews from source.`,
+        detail: fallbackReason,
       });
-      // Read the body as text first, then try to parse as JSON. If the server
-      // returned a non-JSON response (HTML error page, plain text, empty body,
-      // streaming chunk, etc.) we surface a clear error instead of throwing
-      // "Unexpected token" inside res.json().
-      const rawText = await res.text();
-      let data: any = null;
-      if (rawText) {
-        try {
-          data = JSON.parse(rawText);
-        } catch {
-          // Not JSON -- surface the raw text (truncated) as the error.
-          throw new Error(
-            `Pipeline returned a non-JSON response (status ${res.status}): ${rawText.slice(0, 200)}`
-          );
-        }
-      }
-      if (!res.ok) {
-        throw new Error(data?.error || `Pipeline failed (${res.status})`);
-      }
-      setResult(data as PipelineResult);
-      setStages((data as PipelineResult).stages);
+
+      // ------------------------------------------------------------- Stage 2: Group
+      setStage("group", { status: "active", message: "Scrubbing PII + classifying themes..." });
+      const groupRes = await safeFetchJson("/api/pipeline-group", { reviews, appName });
+      if (!groupRes.ok) throw new Error(groupRes.error);
+      const { reviews: classified, themes: themeList, themeBreakdown, warning: groupWarning } = groupRes.data;
+      setStage("group", {
+        status: "done",
+        message: `${themeBreakdown.length} themes identified.`,
+        detail: groupWarning,
+      });
+
+      // ------------------------------------------------------------- Stage 3: Note
+      setStage("note", { status: "active", message: "Generating weekly note..." });
+      const today = new Date().toISOString().slice(0, 10);
+      const twelveWeeksAgo = new Date();
+      twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84);
+      const dateRange = { start: twelveWeeksAgo.toISOString().slice(0, 10), end: today };
+      const noteRes = await safeFetchJson("/api/pipeline-note", {
+        reviews: classified,
+        themes: themeBreakdown,
+        appName,
+        dateRange,
+      });
+      if (!noteRes.ok) throw new Error(noteRes.error);
+      const { note, warning: noteWarning } = noteRes.data;
+      setStage("note", {
+        status: "done",
+        message: `Note generated -- ${note.wordCount} words.`,
+        detail: noteWarning,
+      });
+
+      // ------------------------------------------------------------- Stage 4: Email
+      setStage("email", { status: "active", message: "Drafting email..." });
+      const emailRes = await safeFetchJson("/api/pipeline-email", { note });
+      if (!emailRes.ok) throw new Error(emailRes.error);
+      const { email, warning: emailWarning } = emailRes.data;
+      setStage("email", {
+        status: "done",
+        message: "Email draft ready.",
+        detail: emailWarning,
+      });
+
+      // Assemble the final result object for the dashboard
+      const finalResult: PipelineResult = {
+        reviews: classified,
+        themes: themeBreakdown,
+        note,
+        email,
+        stages: [
+          { id: "import", label: "Import", status: "done", message: usedFallback ? `Imported ${reviewCount} reviews (sample fallback).` : `Imported ${reviewCount} reviews from source.`, detail: fallbackReason },
+          { id: "group", label: "Group", status: "done", message: `${themeBreakdown.length} themes identified.`, detail: groupWarning },
+          { id: "note", label: "Generate Note", status: "done", message: `Note generated -- ${note.wordCount} words.`, detail: noteWarning },
+          { id: "email", label: "Draft Email", status: "done", message: "Email draft ready.", detail: emailWarning },
+        ],
+        meta: {
+          appName,
+          source: appInput.kind === "groww_default" ? "sample" : appInput.kind === "playstore_search" ? "play_store" : appInput.kind === "pdf" ? "pdf_upload" : "image_upload",
+          dateRange,
+          reviewCount,
+          usedFallback,
+          fallbackReason,
+        },
+      };
+      setResult(finalResult);
+      setStages(finalResult.stages);
       setView("dashboard");
     } catch (e: any) {
-      // Network errors, abort errors, parse errors, or thrown errors above.
       let msg = e?.message || String(e) || "Pipeline failed";
-      // Friendlier messages for common failure modes.
       if (/429|too many requests/i.test(msg)) {
-        msg =
-          "The LLM API is rate-limiting us. Please wait ~30 seconds and try again -- the pipeline makes several LLM calls in sequence.";
+        msg = "The LLM API is rate-limiting us. Please wait ~30 seconds and try again.";
       } else if (/timeout|timed out|aborted/i.test(msg)) {
-        msg =
-          "The pipeline timed out. This usually means the LLM API is slow or rate-limiting us. Wait a minute and try again.";
-      } else if (/non-json/i.test(msg)) {
-        msg =
-          "The server returned an unexpected response (likely a function timeout on Vercel -- the pipeline takes 20-60s which exceeds Hobby tier's 10s limit; deploy on Vercel Pro with maxDuration=300, or run locally).";
+        msg = "The pipeline timed out. Wait a minute and try again.";
       }
       setError(msg);
-      // Stay on a sensible view: if the user came from the Groww default CTA,
-      // bounce them to the input view so they can retry / try a different
-      // source. If they were already on the input view, stay there.
       setView((prev) => (prev === "processing" ? "input" : prev));
     } finally {
       setBusy(false);
