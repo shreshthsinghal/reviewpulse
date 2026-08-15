@@ -9,7 +9,7 @@
 // CRITICAL: every export path (note, email, CSV) runs scrubbing. We never
 // assume it was already done upstream.
 
-import { getLLM } from "./llm";
+import { getLLM, withRetry } from "./llm";
 import type { Quote, Review } from "./types";
 
 const REDACTED = "[redacted]";
@@ -71,24 +71,26 @@ export async function llmVerifyQuotes(
     "Use 'redact' with redacted_text where the quote is good but contains a residual PII fragment — replace ONLY the PII with '[redacted]', keep the rest verbatim. " +
     "Use 'reject' only if the quote is mostly personal info or unsafe to publish. " +
     "When in doubt, prefer 'keep' — over-redaction is also a quality problem.";
-  const resp = await zai.chat.completions.create({
-    model: "glm-4-plus",
-    messages: [
-      { role: "system", content: sys },
-      {
-        role: "user",
-        content: JSON.stringify(
-          quotes.map((q, i) => ({
-            index: i,
-            theme: q.theme,
-            rating: q.rating,
-            text: q.text,
-          }))
-        ),
-      },
-    ],
-    temperature: 0.1,
-  });
+  const resp = await withRetry(() =>
+    zai.chat.completions.create({
+      model: "glm-4-plus",
+      messages: [
+        { role: "system", content: sys },
+        {
+          role: "user",
+          content: JSON.stringify(
+            quotes.map((q, i) => ({
+              index: i,
+              theme: q.theme,
+              rating: q.rating,
+              text: q.text,
+            }))
+          ),
+        },
+      ],
+      temperature: 0.1,
+    })
+  );
   const content = resp?.choices?.[0]?.message?.content ?? "[]";
   let arr: any[] = [];
   try {

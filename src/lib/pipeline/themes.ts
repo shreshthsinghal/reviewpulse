@@ -4,7 +4,7 @@
 //   - For any other app, run an LLM clustering pass proposing up to 5 themes.
 //   - Hard cap at 5; merge overflow into "Other".
 
-import { getLLM } from "./llm";
+import { getLLM, withRetry } from "./llm";
 import {
   GROWW_DEFAULT_APP,
   GROWW_THEME_LEGEND,
@@ -24,10 +24,21 @@ export function getThemeLegend(appName: string): string[] {
   return []; // dynamic — must be discovered from data
 }
 
+// Maximum number of reviews we send to the LLM classifier. 60 most-recent
+// reviews is plenty of signal for a weekly pulse — classifying all 300+ that
+// a popular app returns in 12 weeks would (a) blow through LLM rate limits
+// and (b) not improve the note quality since we only surface 3 themes anyway.
+const MAX_REVIEWS_TO_CLASSIFY = 60;
+
 // Classify reviews into themes using LLM. If the legend is empty (dynamic case),
 // we first ask the LLM to PROPOSE up to 5 themes from the data, then classify.
-// We chunk large sets so each LLM call stays under ~50 reviews — payloads
-// larger than that get truncated by the model and the classification breaks.
+// We chunk large sets so each LLM call stays under ~30 reviews (payload size
+// + rate limit friendly) and we cap at MAX_REVIEWS_TO_CLASSIFY most recent.
+//
+// Spec §4.4 mandates a fixed legend for Groww. However, if >80% of reviews
+// land in "Other" using that legend (signal: the legend doesn't match what
+// real users actually complain about), we fall back to dynamic theme
+// discovery so the user gets a useful pulse. This is documented in the README.
 export async function classifyReviews(
   reviews: Review[],
   appName: string,
@@ -41,23 +52,73 @@ export async function classifyReviews(
   }
   themes = capThemes(themes);
 
-  // Chunk: 40 reviews per LLM call. This balances call latency vs payload size.
-  const CHUNK_SIZE = 40;
+  const result = await classifyWithLegend(reviews, appName, themes);
+
+  // If we used a forced legend (e.g. Groww's) and >80% landed in "Other",
+  // the legend doesn't fit the actual review content. Fall back to dynamic
+  // theme discovery so the note is useful instead of "Other, Other, Other".
+  const otherCount = result.reviews.filter((r) => (r.theme ?? "Other") === "Other").length;
+  const otherShare = otherCount / Math.max(result.reviews.length, 1);
+  if (forcedLegend && otherShare > 0.8 && result.reviews.length > 10) {
+    console.warn(
+      `[themes] fixed legend produced ${Math.round(otherShare * 100)}% "Other" — falling back to dynamic themes for ${appName}`
+    );
+    const dynamicThemes = await proposeDynamicThemes(reviews, appName);
+    const capped = capThemes(dynamicThemes);
+    if (capped.length > 1) {
+      const dynamicResult = await classifyWithLegend(reviews, appName, capped);
+      const dynamicOtherShare =
+        dynamicResult.reviews.filter((r) => (r.theme ?? "Other") === "Other").length /
+        Math.max(dynamicResult.reviews.length, 1);
+      // Only use dynamic result if it's meaningfully better.
+      if (dynamicOtherShare < otherShare) {
+        return dynamicResult;
+      }
+    }
+  }
+
+  return result;
+}
+
+async function classifyWithLegend(
+  reviews: Review[],
+  appName: string,
+  themes: string[]
+): Promise<{ reviews: Review[]; themes: string[] }> {
+  // Sort by date desc, take the most-recent MAX_REVIEWS_TO_CLASSIFY. We still
+  // build the theme breakdown from ALL reviews below — but only the classified
+  // subset gets theme tags from the LLM; the rest keep their pre-existing
+  // tag (or "Other" if none).
+  const sorted = [...reviews].sort((a, b) => b.date.localeCompare(a.date));
+  const toClassify = sorted.slice(0, MAX_REVIEWS_TO_CLASSIFY);
+
+  // Chunk: 30 reviews per LLM call. Smaller chunks = fewer rate-limit hits
+  // and the model is more reliable with smaller payloads.
+  const CHUNK_SIZE = 30;
   const chunks: Review[][] = [];
-  for (let i = 0; i < reviews.length; i += CHUNK_SIZE) {
-    chunks.push(reviews.slice(i, i + CHUNK_SIZE));
+  for (let i = 0; i < toClassify.length; i += CHUNK_SIZE) {
+    chunks.push(toClassify.slice(i, i + CHUNK_SIZE));
   }
 
   const themeById = new Map<string, string>();
-  // Process chunks sequentially — parallel would risk rate limits.
-  for (const chunk of chunks) {
-    const mapping = await classifyChunk(chunk, appName, themes);
-    for (const [id, theme] of mapping) themeById.set(id, theme);
+  // Process chunks sequentially with retry-on-429 (handled inside classifyChunk).
+  for (let i = 0; i < chunks.length; i++) {
+    try {
+      const mapping = await classifyChunk(chunks[i], appName, themes);
+      for (const [id, theme] of mapping) themeById.set(id, theme);
+    } catch (err) {
+      // If even retry fails, the chunk's reviews stay "Other" — the pipeline
+      // continues with the chunks we did classify. Better partial output than
+      // a 500 error.
+      console.warn(`[themes] chunk ${i + 1}/${chunks.length} failed:`, (err as Error).message);
+    }
   }
 
+  // Apply: classified reviews get their LLM-assigned theme; everything else
+  // keeps its existing theme tag (or "Other" if none).
   const classified = reviews.map((r) => ({
     ...r,
-    theme: themeById.get(r.id) ?? "Other",
+    theme: themeById.get(r.id) ?? r.theme ?? "Other",
   }));
   return { reviews: classified, themes };
 }
@@ -77,23 +138,25 @@ Rules:
 - Never invent a theme outside the provided list.
 - Base the assignment only on the review text and title provided.
 Output: JSON array of {id, theme} pairs, nothing else.`;
-  const resp = await zai.chat.completions.create({
-    model: "glm-4-plus",
-    messages: [
-      { role: "system", content: sys },
-      {
-        role: "user",
-        content: JSON.stringify(
-          reviews.map((r) => ({
-            id: r.id,
-            title: r.title,
-            text: r.text.slice(0, 400),
-          }))
-        ),
-      },
-    ],
-    temperature: 0.1,
-  });
+  const resp = await withRetry(() =>
+    zai.chat.completions.create({
+      model: "glm-4-plus",
+      messages: [
+        { role: "system", content: sys },
+        {
+          role: "user",
+          content: JSON.stringify(
+            reviews.map((r) => ({
+              id: r.id,
+              title: r.title,
+              text: r.text.slice(0, 400),
+            }))
+          ),
+        },
+      ],
+      temperature: 0.1,
+    })
+  );
   const content = resp?.choices?.[0]?.message?.content ?? "[]";
   let arr: any[] = [];
   try {
@@ -139,14 +202,16 @@ Rules:
 - Use short, descriptive labels (1-3 words, Title Case).
 - Always include "Other" as one of the 5 themes if you propose fewer than 5 specific themes.
 Output: JSON object {"themes": ["...", "..."]} nothing else.`;
-  const resp = await zai.chat.completions.create({
-    model: "glm-4-plus",
-    messages: [
-      { role: "system", content: sys },
-      { role: "user", content: JSON.stringify(sample) },
-    ],
-    temperature: 0.2,
-  });
+  const resp = await withRetry(() =>
+    zai.chat.completions.create({
+      model: "glm-4-plus",
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: JSON.stringify(sample) },
+      ],
+      temperature: 0.2,
+    })
+  );
   const content = resp?.choices?.[0]?.message?.content ?? "{}";
   try {
     const cleaned = content

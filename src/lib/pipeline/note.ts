@@ -2,7 +2,7 @@
 // Spec §4.5: top 3 themes, 3 real quotes, 3 action ideas, ≤250 words.
 // Tone: neutral, analytical, non-alarmist — a pulse for a team to act on.
 
-import { getLLM } from "./llm";
+import { getLLM, withRetry } from "./llm";
 import { llmVerifyQuotes } from "./pii-scrub";
 import {
   NOTE_ACTIONS,
@@ -64,7 +64,7 @@ export async function generateWeeklyNote(
 Input: grouped, theme-tagged reviews for ${appName}, covering ${dateRange.start} to ${dateRange.end}.
 Write, in markdown, under these exact headers:
 ## Top Themes
-(top 3 themes, one line each, with rough share/volume)
+(top 3 themes, one line each, with rough share/volume — use the "topThemes" array provided; do NOT include "Other" unless it's in that array)
 ## What Users Are Saying
 (3 short real quotes, PII-stripped, each attributed only to theme + star rating, never to a person)
 ## Action Ideas
@@ -72,7 +72,14 @@ Write, in markdown, under these exact headers:
 Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames, emails, or IDs anywhere. Be scannable, not narrative. Tone: neutral, analytical, non-alarmist.`;
 
   const userPayload = {
-    topThemes,
+    topThemes: topThemes.map((t) => ({
+      theme: t.theme,
+      count: t.count,
+      share: `${Math.round(t.share * 100)}%`,
+    })),
+    // Explicit instruction: these are the EXACT 3 themes to surface in the
+    // "Top Themes" section. Do not substitute or add others.
+    topThemesInstruction: `Surface EXACTLY these ${NOTE_TOP_THEMES} themes in the "Top Themes" section, in this order. Do not add "Other".`,
     candidateQuotes: candidates.map((c) => ({
       theme: c.theme,
       rating: c.rating,
@@ -92,14 +99,16 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
     })),
   };
 
-  const resp = await zai.chat.completions.create({
-    model: "glm-4-plus",
-    messages: [
-      { role: "system", content: sys },
-      { role: "user", content: JSON.stringify(userPayload) },
-    ],
-    temperature: 0.3,
-  });
+  const resp = await withRetry(() =>
+    zai.chat.completions.create({
+      model: "glm-4-plus",
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: JSON.stringify(userPayload) },
+      ],
+      temperature: 0.3,
+    })
+  );
 
   const rawMarkdown = resp?.choices?.[0]?.message?.content ?? "";
   const markdown = enforceWordLimit(rawMarkdown);

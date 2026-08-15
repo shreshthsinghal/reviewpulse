@@ -197,10 +197,31 @@ export async function POST(req: NextRequest) {
   let themeList: string[] = [];
   let classified: Review[] = scrubbed;
   if (canCallLLM) {
-    const forced = isGrowwLegend(appName) ? getThemeLegend(appName) : undefined;
-    const cls = await classifyReviews(scrubbed, appName, forced);
-    classified = cls.reviews;
-    themeList = cls.themes;
+    try {
+      const forced = isGrowwLegend(appName) ? getThemeLegend(appName) : undefined;
+      const cls = await classifyReviews(scrubbed, appName, forced);
+      classified = cls.reviews;
+      themeList = cls.themes;
+    } catch (err) {
+      // If classification fails entirely (rate limit, network), fall back to
+      // a simple rating-based pseudo-theming so the pipeline still produces a
+      // note. We surface the issue in the group stage detail.
+      const msg = (err as Error).message ?? "classification failed";
+      setStage("group", {
+        status: "done",
+        message: `Themes unavailable — using rating-based fallback.`,
+        detail: `Classifier error: ${msg}`,
+      });
+      // Simple fallback: tag by rating bucket. Better than "Other" for all.
+      classified = scrubbed.map((r) => ({
+        ...r,
+        theme:
+          r.rating >= 4 ? "Positive feedback" :
+          r.rating <= 2 ? "Critical feedback" :
+          "Mixed feedback",
+      }));
+      themeList = ["Positive feedback", "Critical feedback", "Mixed feedback", "Other"];
+    }
   } else {
     // sample fallback already has theme tags from seeds
     themeList = Array.from(
@@ -216,7 +237,31 @@ export async function POST(req: NextRequest) {
   // ---------------------------------------------------------------- 3. Note
   setStage("note", { status: "active", message: "Generating weekly note…" });
   const dateRange = defaultDateRange();
-  const note = await generateWeeklyNote(classified, themes, appName, dateRange);
+  let note;
+  try {
+    note = await generateWeeklyNote(classified, themes, appName, dateRange);
+  } catch (err) {
+    // If note generation fails (rate limit, network), produce a minimal
+    // note from the raw data so the user still gets *something* useful.
+    const msg = (err as Error).message ?? "note generation failed";
+    note = {
+      appName,
+      dateRange,
+      markdown: `## Top Themes\n${themes.slice(0, 3).map((t) => `- ${t.theme} (${Math.round(t.share * 100)}%, ${t.count} reviews, avg ${t.avgRating}★)`).join("\n")}\n\n## What Users Are Saying\n${classified.slice(0, 3).map((r) => `- (${r.rating}★): "${r.text.slice(0, 140)}"`).join("\n")}\n\n## Action Ideas\n- Review the top theme above with the product team\n- Investigate the lowest-rated reviews for specific issues\n- Confirm the date range covers the most recent week\n\n<!-- Note: LLM note generation failed (${msg}). Showing structured fallback. -->`,
+      wordCount: 0,
+      topThemes: themes.slice(0, 3).map((t) => t.theme),
+      quotes: classified.slice(0, 3).map((r) => ({
+        text: r.text.slice(0, 200),
+        theme: r.theme ?? "Other",
+        rating: r.rating,
+      })),
+      actions: [
+        { text: "Review the top theme above with the product team", theme: "Mixed" },
+        { text: "Investigate the lowest-rated reviews for specific issues", theme: "Mixed" },
+        { text: "Confirm the date range covers the most recent week", theme: "Mixed" },
+      ],
+    };
+  }
   setStage("note", {
     status: "done",
     message: `Note generated — ${note.wordCount} words.`,

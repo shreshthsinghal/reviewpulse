@@ -4,7 +4,7 @@
 // these importers ONLY normalize raw text/rating/date out of the source.
 
 import type { Review, ReviewSource } from "./types";
-import { getLLM } from "./llm";
+import { getLLM, withRetry } from "./llm";
 import {
   GROWW_APPSTORE_ID,
   GROWW_PLAYSTORE_ID,
@@ -106,15 +106,18 @@ async function searchPlayStoreAppsViaWebSearch(query: string): Promise<
 
 export async function fetchPlayStoreReviews(
   appId: string,
-  appName: string
+  appName: string,
+  opts: { maxPages?: number } = {}
 ): Promise<{ reviews: Review[]; usedFallback: boolean; fallbackReason?: string }> {
   try {
     const scraper = await getScraper();
-    // Fetch newest reviews — paginate to gather ~150 max (covers 8-12 weeks for
-    // most apps with reasonable review volume).
+    // Fetch newest reviews — paginate up to maxPages (default 3 = ~150 reviews).
+    // We cap because (a) we only classify 60 most-recent anyway, and (b) it
+    // keeps the pipeline fast and LLM-rate-limit-friendly.
+    const maxPages = opts.maxPages ?? 3;
     const collected: any[] = [];
     let pageNum = 0;
-    while (pageNum < 6) {
+    while (pageNum < maxPages) {
       const r: any = await scraper.reviews({
         appId,
         sort: scraper.sort.NEWEST,
@@ -286,19 +289,21 @@ export async function parseImageReviews(
       "Return STRICT JSON ONLY: an array of objects with fields: rating (1-5 int, null if unknown), title (string|null), text (string, the review body verbatim), date (ISO 8601 'YYYY-MM-DD' if visible, otherwise null). " +
       "Do NOT include usernames, emails, phone numbers, or any PII. If a field is unreadable, return null. If no reviews are visible, return [].";
 
-    const resp = await zai.chat.completions.createVision({
-      model: "glm-4v-plus",
-      messages: [
-        { role: "system", content: sys },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `App name context: ${appName}. Extract all reviews visible in this image.` },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    });
+    const resp = await withRetry(() =>
+      zai.chat.completions.createVision({
+        model: "glm-4v-plus",
+        messages: [
+          { role: "system", content: sys },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: `App name context: ${appName}. Extract all reviews visible in this image.` },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      })
+    );
 
     const content = resp?.choices?.[0]?.message?.content ?? "[]";
     const arr = safeJsonParseArr(content);
@@ -350,17 +355,19 @@ async function llmExtractReviewsFromText(
     `You are an extraction pipeline. From the provided raw text dump (HTML or plain text), extract every app review you can identify for "${appName}". ` +
     "Return STRICT JSON ONLY: an array of objects with fields: rating (1-5 int, null if unknown), title (string|null), text (string, the review body), date (ISO 8601 'YYYY-MM-DD' if visible, otherwise null). " +
     "Do NOT include usernames, emails, phone numbers, or any PII. If a field is unreadable, return null. If no reviews are visible, return [].";
-  const resp = await zai.chat.completions.create({
-    model: "glm-4-plus",
-    messages: [
-      { role: "system", content: sys },
-      {
-        role: "user",
-        content: `Source: ${source}. Text to extract from:\n\n${text.slice(0, 28000)}`,
-      },
-    ],
-    temperature: 0.1,
-  });
+  const resp = await withRetry(() =>
+    zai.chat.completions.create({
+      model: "glm-4-plus",
+      messages: [
+        { role: "system", content: sys },
+        {
+          role: "user",
+          content: `Source: ${source}. Text to extract from:\n\n${text.slice(0, 28000)}`,
+        },
+      ],
+      temperature: 0.1,
+    })
+  );
   const content = resp?.choices?.[0]?.message?.content ?? "[]";
   return safeJsonParseArr(content).map((r: any) => ({
     rating: typeof r.rating === "number" ? r.rating : null,

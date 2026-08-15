@@ -9,6 +9,8 @@
 // SDK's auto-loader config file exists at /etc/.z-ai-config or
 // <cwd>/.z-ai-config. This way, environments where the SDK has credentials
 // (like this sandbox) are treated as "LLM available" even without env vars.
+//
+// withRetry() wraps any async function with exponential backoff for 429s.
 
 import ZAI from "z-ai-web-dev-sdk";
 import fs from "fs/promises";
@@ -30,7 +32,6 @@ async function fileExists(p: string): Promise<boolean> {
  * exists at one of its search paths. */
 export async function hasLLMKey(): Promise<boolean> {
   if (apiKey) return true;
-  // SDK searches in this order: process.cwd()/.z-ai-config, ~home/.z-ai-config, /etc/.z-ai-config
   const localPath = path.join(process.cwd(), ".z-ai-config");
   if (await fileExists(localPath)) return true;
   const homePath = path.join(process.env.HOME ?? "/root", ".z-ai-config");
@@ -40,16 +41,13 @@ export async function hasLLMKey(): Promise<boolean> {
 }
 
 /** Synchronous version — only checks env var. Use the async version when
- * possible, but this works for places where you can't await (e.g. the
- * top-level module body). Returns false in sandboxed envs that rely on
- * /etc/.z-ai-config. */
+ * possible, but this works for places where you can't await. */
 export function hasLLMKeySync(): boolean {
   return Boolean(apiKey);
 }
 
 // If GLM_API_KEY is set via env (Vercel), write a project-local .z-ai-config
-// so the SDK's auto-loader picks it up. Idempotent — only writes if env is set
-// and the file does not already exist with matching contents.
+// so the SDK's auto-loader picks it up. Idempotent.
 async function ensureLocalConfig() {
   if (!apiKey) return; // fall back to /etc/.z-ai-config
   const configPath = path.join(process.cwd(), ".z-ai-config");
@@ -63,7 +61,7 @@ async function ensureLocalConfig() {
   try {
     await fs.writeFile(configPath, desired, { mode: 0o600 });
   } catch {
-    // best-effort; if write fails the SDK will throw a clearer error
+    // best-effort
   }
 }
 
@@ -77,6 +75,40 @@ export async function getLLM(): Promise<ZAI> {
     })();
   }
   return clientPromise;
+}
+
+/**
+ * Wrap an async function with retry-on-429. GLM's API rate-limits aggressive
+ * callers; we back off exponentially (1s, 2s, 4s, 8s) up to 4 attempts.
+ * Also catches transient network errors.
+ *
+ * Usage:
+ *   const resp = await withRetry(() => zai.chat.completions.create({...}));
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  opts: { maxAttempts?: number; baseDelayMs?: number } = {}
+): Promise<T> {
+  const maxAttempts = opts.maxAttempts ?? 4;
+  const baseDelayMs = opts.baseDelayMs ?? 1000;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastErr = err;
+      const msg = String(err?.message ?? err);
+      const is429 = msg.includes("429") || /too many requests/i.test(msg);
+      const isTransient = is429 || msg.includes("fetch failed") || msg.includes("ECONNRESET") || msg.includes("ETIMEDOUT");
+      if (!isTransient || attempt === maxAttempts - 1) {
+        throw err;
+      }
+      // Exponential backoff with jitter
+      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
 }
 
 export { baseUrl };
