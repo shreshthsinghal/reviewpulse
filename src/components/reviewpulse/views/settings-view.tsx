@@ -15,19 +15,19 @@ export function SettingsView({ onBack, onRerun }: Props) {
     <div className="mx-auto max-w-3xl px-6 pt-8 pb-20">
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back
       </button>
 
-      <h1 className="mt-6 font-display text-3xl sm:text-4xl font-bold tracking-tight">
+      <h1 className="mt-6 text-3xl sm:text-4xl font-bold tracking-tight">
         Settings &amp; About
       </h1>
 
       <div className="mt-6 space-y-5">
         <section className="rounded-xl border border-border bg-[var(--surface)] p-5">
-          <h2 className="font-display text-lg font-semibold">This week</h2>
+          <h2 className="text-lg font-semibold">This week</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Re-run the pipeline for the current week. Pulls the latest reviews
             from the configured source and regenerates the note + email draft.
@@ -39,14 +39,14 @@ export function SettingsView({ onBack, onRerun }: Props) {
         </section>
 
         <section className="rounded-xl border border-border bg-[var(--surface)] p-5">
-          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
             <Info className="h-4 w-4 text-[var(--primary)]" />
             How this works
           </h2>
           <div className="mt-3 space-y-3 text-sm text-muted-foreground leading-relaxed">
             <p>
               ReviewPulse runs a 4-stage pipeline:{" "}
-              <span className="font-mono text-foreground">Import → Group → Generate Note → Draft Email</span>.
+              <span className="text-foreground">Import → Group → Generate Note → Draft Email</span>.
               All four stages run server-side via Next.js API routes against the
               GLM model.
             </p>
@@ -79,7 +79,7 @@ export function SettingsView({ onBack, onRerun }: Props) {
         </section>
 
         <section className="rounded-xl border border-border bg-[var(--surface)] p-5">
-          <h2 className="font-display text-lg font-semibold">Theme legend (Groww default)</h2>
+          <h2 className="text-lg font-semibold">Theme legend (Groww default)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             These 5 themes are used when analyzing Groww. For any other app,
             themes are discovered dynamically — but always capped at 5.
@@ -90,7 +90,7 @@ export function SettingsView({ onBack, onRerun }: Props) {
                 key={t}
                 className="flex items-center gap-3 rounded-lg border border-border/60 bg-background px-3 py-2"
               >
-                <span className="font-mono text-[11px] font-semibold text-[var(--primary)]">
+                <span className="text-xs font-semibold text-[var(--primary)]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="text-sm font-medium">{t}</span>
@@ -100,7 +100,7 @@ export function SettingsView({ onBack, onRerun }: Props) {
         </section>
 
         <section className="rounded-xl border border-border bg-[var(--surface)] p-5">
-          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-[var(--primary)]" />
             Data sources &amp; PII
           </h2>

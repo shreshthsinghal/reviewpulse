@@ -130,12 +130,12 @@ function renderNotePrintableHtml(note: WeeklyNote, result?: PipelineResult): str
   .mast { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid #0E7C7B; padding-bottom: 8px; margin-bottom: 24px; }
   .brand { font-weight: 700; letter-spacing: -0.02em; font-size: 22px; }
   .brand .accent { color: #0E7C7B; }
-  .meta { font-family: "IBM Plex Mono", Menlo, monospace; font-size: 11px; color: #6B6B6B; text-transform: uppercase; letter-spacing: 0.08em; }
+  .meta { font-size: 12px; color: #6B6B6B; }
   h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.02em; }
-  h2.section { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: #0E7C7B; border-top: 1px solid #E5E3DE; padding-top: 18px; margin-top: 24px; }
+  h2.section { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: #0E7C7B; border-top: 1px solid #E5E3DE; padding-top: 18px; margin-top: 24px; }
   ul { padding-left: 20px; }
   li { margin-bottom: 6px; }
-  .footer { margin-top: 40px; border-top: 1px solid #E5E3DE; padding-top: 12px; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 10px; color: #6B6B6B; text-transform: uppercase; letter-spacing: 0.08em; }
+  .footer { margin-top: 40px; border-top: 1px solid #E5E3DE; padding-top: 12px; font-size: 11px; color: #6B6B6B; }
   @media print { body { padding: 0; } }
 </style></head>
 <body>

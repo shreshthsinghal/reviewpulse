@@ -40,15 +40,52 @@ function clampRating(n: unknown): 1 | 2 | 3 | 4 | 5 | null {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Play Store — public listing only. Uses web_search to find the app, then
-//    page_reader to fetch the public reviews page. No auth, no Console API.
-//    (Per spec §5.5: this is a public listing, not a private API.)
+// 1. Play Store — public listing only.
+//    Uses google-play-scraper (an unofficial but widely-used library that
+//    reads the public, non-authenticated Play Store listing pages via the
+//    internal batchexecute JSON-RPC endpoint — same data the browser sees
+//    when you visit play.google.com/store/apps/details?id=...). No Play
+//    Console / Developer API is used (those require app ownership). See
+//    README for ToS implications.
 // ---------------------------------------------------------------------------
+
+// Dynamic import — google-play-scraper ships ESM-only and we only need it
+// when a Play Store fetch is actually requested.
+async function getScraper() {
+  return (await import("google-play-scraper")).default;
+}
 
 export async function searchPlayStoreApps(query: string): Promise<
   Array<{ appId: string; title: string; developer: string; score: number | null }>
 > {
-  if (!query.trim()) return [];
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const scraper = await getScraper();
+  try {
+    const results = await scraper.search({
+      term: q,
+      num: 8,
+      lang: "en",
+      country: "us",
+      fullDetail: false,
+    });
+    return (results || [])
+      .filter((r: any) => r?.appId)
+      .map((r: any) => ({
+        appId: r.appId,
+        title: r.title ?? r.appId,
+        developer: r.developer ?? r.publisher ?? "",
+        score: typeof r.score === "number" ? r.score : null,
+      }));
+  } catch {
+    // Fall back to a web_search if the scraper's search endpoint fails
+    return searchPlayStoreAppsViaWebSearch(query);
+  }
+}
+
+async function searchPlayStoreAppsViaWebSearch(query: string): Promise<
+  Array<{ appId: string; title: string; developer: string; score: number | null }>
+> {
   const zai = await getLLM();
   const results = await zai.functions.invoke("web_search", {
     query: `site:play.google.com/store/apps/details "${query}"`,
@@ -61,14 +98,8 @@ export async function searchPlayStoreApps(query: string): Promise<
     const appId = m[1];
     const title = (r.name || "").split(" - ")[0].split(" | ")[0].trim();
     if (!title) continue;
-    out.push({
-      appId,
-      title,
-      developer: r.host_name,
-      score: null,
-    });
+    out.push({ appId, title, developer: r.host_name, score: null });
   }
-  // de-dupe by appId
   const seen = new Set<string>();
   return out.filter((x) => (seen.has(x.appId) ? false : (seen.add(x.appId), true)));
 }
@@ -78,36 +109,53 @@ export async function fetchPlayStoreReviews(
   appName: string
 ): Promise<{ reviews: Review[]; usedFallback: boolean; fallbackReason?: string }> {
   try {
-    const zai = await getLLM();
-    const url = `https://play.google.com/store/apps/details?id=${encodeURIComponent(
-      appId
-    )}&showAllReviews=true`;
-    const page = await zai.functions.invoke("page_reader", { url });
+    const scraper = await getScraper();
+    // Fetch newest reviews — paginate to gather ~150 max (covers 8-12 weeks for
+    // most apps with reasonable review volume).
+    const collected: any[] = [];
+    let pageNum = 0;
+    while (pageNum < 6) {
+      const r: any = await scraper.reviews({
+        appId,
+        sort: scraper.sort.NEWEST,
+        num: 50,
+        page: pageNum,
+        lang: "en",
+        country: "us",
+        paginate: false,
+      });
+      const data = Array.isArray(r?.data) ? r.data : [];
+      if (data.length === 0) break;
+      collected.push(...data);
+      // Stop early if reviews are older than our window
+      const oldest = data[data.length - 1];
+      if (oldest?.date && !withinWindow(oldest.date)) break;
+      if (r?.nextPaginationToken == null) break;
+      pageNum++;
+    }
 
-    // The HTML of the Play Store reviews page is large and JS-rendered in
-    // production; we ask the LLM to extract reviews from whatever text the
-    // reader returns. This is the "public listing" path the spec permits.
-    const html = page?.data?.html ?? "";
-    if (!html || html.length < 500) {
+    const reviews: Review[] = collected
+      .filter((x: any) => x?.text && typeof x.score === "number" && x.date)
+      .filter((x: any) => withinWindow(x.date))
+      .map((x: any, idx: number) => ({
+        id: genId("ps", idx),
+        source: "play_store" as ReviewSource,
+        rating: clampRating(x.score) ?? 3,
+        // Drop the userName — PII — at ingestion. The schema has no field for
+        // it, so we just don't carry it forward.
+        title: typeof x.title === "string" && x.title.trim() ? x.title : null,
+        text: x.text ?? "",
+        date: new Date(x.date).toISOString().slice(0, 10),
+        theme: null,
+      }));
+
+    if (reviews.length === 0) {
       return {
         reviews: [],
         usedFallback: true,
-        fallbackReason: "Play Store page returned insufficient content (likely JS-rendered).",
+        fallbackReason: `No reviews in last ${REVIEW_WINDOW_WEEKS_MAX} weeks for ${appName} (${appId}).`,
       };
     }
-
-    const extracted = await llmExtractReviewsFromHtml(html, appName, "play_store");
-    const reviews = extracted
-      .filter((r) => r.date && withinWindow(r.date))
-      .map((r, idx) => ({
-        id: genId("ps", idx),
-        source: "play_store" as ReviewSource,
-        rating: clampRating(r.rating) ?? 3,
-        title: (r.title ?? null) as string | null,
-        text: r.text ?? "",
-        date: r.date,
-        theme: null,
-      }));
     return { reviews, usedFallback: false };
   } catch (err) {
     return {
@@ -290,14 +338,6 @@ interface ExtractedReview {
   title: string | null;
   text: string;
   date: string | null;
-}
-
-async function llmExtractReviewsFromHtml(
-  html: string,
-  appName: string,
-  source: string
-): Promise<ExtractedReview[]> {
-  return llmExtractReviewsFromText(html.slice(0, 30000), appName, source);
 }
 
 async function llmExtractReviewsFromText(

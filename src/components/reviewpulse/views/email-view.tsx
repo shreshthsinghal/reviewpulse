@@ -106,13 +106,13 @@ export function EmailView({ result, onBack }: Props) {
     <div className="mx-auto max-w-3xl px-6 pt-8 pb-20">
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to dashboard
       </button>
 
-      <h1 className="mt-6 font-display text-3xl sm:text-4xl font-bold tracking-tight">
+      <h1 className="mt-6 text-3xl sm:text-4xl font-bold tracking-tight">
         Email draft
       </h1>
       <p className="mt-2 text-muted-foreground">
@@ -123,7 +123,7 @@ export function EmailView({ result, onBack }: Props) {
       <div className="mt-6 rounded-2xl border border-border bg-[var(--surface)] p-5 sm:p-6 shadow-sm">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="to" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <Label htmlFor="to" className="text-xs text-muted-foreground">
               To (your email / alias — self-send only)
             </Label>
             <Input
@@ -137,10 +137,10 @@ export function EmailView({ result, onBack }: Props) {
           </div>
           <div>
             <div className="flex items-baseline justify-between">
-              <Label htmlFor="subj" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <Label htmlFor="subj" className="text-xs text-muted-foreground">
                 Subject
               </Label>
-              <span className="font-mono text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {email.subject.length} / {EMAIL_SUBJECT_LIMIT}
               </span>
             </div>
@@ -158,14 +158,14 @@ export function EmailView({ result, onBack }: Props) {
             />
           </div>
           <div>
-            <Label htmlFor="body" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <Label htmlFor="body" className="text-xs text-muted-foreground">
               Body
             </Label>
             <Textarea
               id="body"
               value={email.body}
               onChange={(e) => setEmail({ ...email, body: e.target.value })}
-              className="mt-1.5 min-h-[320px] font-mono text-[13px] leading-relaxed resize-y"
+              className="mt-1.5 min-h-[320px] text-[13px] leading-relaxed resize-y"
             />
           </div>
         </div>

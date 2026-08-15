@@ -26,6 +26,8 @@ export function getThemeLegend(appName: string): string[] {
 
 // Classify reviews into themes using LLM. If the legend is empty (dynamic case),
 // we first ask the LLM to PROPOSE up to 5 themes from the data, then classify.
+// We chunk large sets so each LLM call stays under ~50 reviews — payloads
+// larger than that get truncated by the model and the classification breaks.
 export async function classifyReviews(
   reviews: Review[],
   appName: string,
@@ -38,12 +40,40 @@ export async function classifyReviews(
     themes = await proposeDynamicThemes(reviews, appName);
   }
   themes = capThemes(themes);
+
+  // Chunk: 40 reviews per LLM call. This balances call latency vs payload size.
+  const CHUNK_SIZE = 40;
+  const chunks: Review[][] = [];
+  for (let i = 0; i < reviews.length; i += CHUNK_SIZE) {
+    chunks.push(reviews.slice(i, i + CHUNK_SIZE));
+  }
+
+  const themeById = new Map<string, string>();
+  // Process chunks sequentially — parallel would risk rate limits.
+  for (const chunk of chunks) {
+    const mapping = await classifyChunk(chunk, appName, themes);
+    for (const [id, theme] of mapping) themeById.set(id, theme);
+  }
+
+  const classified = reviews.map((r) => ({
+    ...r,
+    theme: themeById.get(r.id) ?? "Other",
+  }));
+  return { reviews: classified, themes };
+}
+
+async function classifyChunk(
+  reviews: Review[],
+  appName: string,
+  themes: string[]
+): Promise<Map<string, string>> {
   const zai = await getLLM();
   const sys = `You are classifying app store reviews into a fixed theme set for ${appName}.
 Themes: ${themes.join(", ")}
 Rules:
 - Assign exactly one theme per review.
-- If nothing fits well, use "Other."
+- Try to find the BEST-fitting theme from the list before falling back to "Other."
+- "Other" should be used for fewer than ~25% of reviews. If you find yourself assigning "Other" frequently, look again — there is usually a better fit.
 - Never invent a theme outside the provided list.
 - Base the assignment only on the review text and title provided.
 Output: JSON array of {id, theme} pairs, nothing else.`;
@@ -57,7 +87,7 @@ Output: JSON array of {id, theme} pairs, nothing else.`;
           reviews.map((r) => ({
             id: r.id,
             title: r.title,
-            text: r.text.slice(0, 500),
+            text: r.text.slice(0, 400),
           }))
         ),
       },
@@ -76,23 +106,18 @@ Output: JSON array of {id, theme} pairs, nothing else.`;
   } catch {
     arr = [];
   }
-  const themeById = new Map<string, string>();
+  const out = new Map<string, string>();
   for (const x of arr) {
     if (x && typeof x.id === "string") {
       let t = typeof x.theme === "string" ? x.theme : "Other";
-      // snap to legend (case-insensitive match) or "Other"
       const matched = themes.find(
         (th) => th.toLowerCase() === t.toLowerCase()
       );
       t = matched ?? "Other";
-      themeById.set(x.id, t);
+      out.set(x.id, t);
     }
   }
-  const classified = reviews.map((r) => ({
-    ...r,
-    theme: themeById.get(r.id) ?? "Other",
-  }));
-  return { reviews: classified, themes };
+  return out;
 }
 
 // Ask the LLM to propose up to 5 themes appropriate to the app's actual
@@ -129,8 +154,17 @@ Output: JSON object {"themes": ["...", "..."]} nothing else.`;
       .replace(/```$/i, "")
       .trim();
     const obj = JSON.parse(cleaned);
-    const arr = Array.isArray(obj?.themes) ? obj.themes : [];
-    return arr.filter((x: any) => typeof x === "string").slice(0, MAX_THEMES);
+    let arr: any[] = Array.isArray(obj?.themes) ? obj.themes : [];
+    // Sometimes the model returns the themes array directly, or as a string.
+    if (arr.length === 0 && Array.isArray(obj)) arr = obj;
+    if (arr.length === 0 && typeof obj?.themes === "string") {
+      arr = (obj.themes as string).split(",").map((s: string) => s.trim());
+    }
+    const result = arr
+      .filter((x: any) => typeof x === "string" && x.trim().length > 0)
+      .map((s: string) => s.trim())
+      .slice(0, MAX_THEMES);
+    return result.length > 0 ? result : ["Other"];
   } catch {
     return ["Other"];
   }

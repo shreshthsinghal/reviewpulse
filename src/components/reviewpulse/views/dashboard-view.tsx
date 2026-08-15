@@ -68,7 +68,7 @@ export function DashboardView({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           New analysis
@@ -91,13 +91,13 @@ export function DashboardView({
       <div className="masthead-rule mt-4" />
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--primary)]">
+          <div className="text-xs text-[var(--primary)]">
             Weekly Pulse · {meta.appName}
           </div>
-          <h1 className="mt-2 font-display text-4xl sm:text-5xl font-bold tracking-tight">
+          <h1 className="mt-2 text-4xl sm:text-5xl font-bold tracking-tight">
             {meta.appName} — this week, at a glance
           </h1>
-          <div className="mt-2 font-mono text-xs text-muted-foreground">
+          <div className="mt-2 text-xs text-muted-foreground">
             {meta.dateRange.start} → {meta.dateRange.end} · {meta.reviewCount} reviews
             {meta.usedFallback && (
               <span className="ml-2 inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
@@ -127,8 +127,8 @@ export function DashboardView({
         className="mt-8 rounded-2xl border border-[var(--primary)]/30 bg-[var(--surface)] p-6 sm:p-8 shadow-sm"
       >
         <div className="flex items-baseline justify-between border-b border-border pb-3">
-          <div className="font-display text-lg font-semibold">Weekly Note · ≤250 words</div>
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-lg font-semibold">Weekly Note · ≤250 words</div>
+          <div className="text-xs text-muted-foreground">
             {note.wordCount} words · {note.quotes.length} quotes · {note.actions.length} actions
           </div>
         </div>
@@ -179,7 +179,7 @@ export function DashboardView({
 
       {/* How this was built */}
       <div className="mt-10 rounded-xl border border-border bg-[var(--surface)] p-5">
-        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           How this note was built
         </div>
         <div className="mt-3">
@@ -202,8 +202,8 @@ function ChartCard({
   return (
     <div className="rounded-2xl border border-border bg-[var(--surface)] p-5 shadow-sm">
       <div className="flex items-baseline justify-between border-b border-border pb-2">
-        <h3 className="font-display text-base font-semibold text-foreground">{title}</h3>
-        <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <span className="text-xs text-muted-foreground">
           {subtitle}
         </span>
       </div>

@@ -40,7 +40,7 @@ import { hasLLMKey } from "@/lib/pipeline/llm";
 import { GROWW_DEFAULT_APP } from "@/lib/pipeline/constants";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function stage(id: string, label: string): PipelineStageState {
   return { id: id as PipelineStageState["id"], label, status: "pending", message: "" };
@@ -62,8 +62,10 @@ export async function POST(req: NextRequest) {
   }
 
   // If no LLM key, we can still ship a sample-based demo so the UI is
-  // explorable in a preview environment without secrets.
-  const canCallLLM = hasLLMKey();
+  // explorable in a preview environment without secrets. hasLLMKey() also
+  // checks /etc/.z-ai-config so sandboxed envs with auto-configured SDK
+  // credentials are treated as "LLM available".
+  const canCallLLM = await hasLLMKey();
 
   const stages: PipelineStageState[] = [
     stage("import", "Import"),

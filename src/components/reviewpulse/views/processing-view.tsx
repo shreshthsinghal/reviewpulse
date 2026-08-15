@@ -34,10 +34,10 @@ export function ProcessingView({ stages, appName }: Props) {
         transition={{ duration: 0.4 }}
         className="text-center"
       >
-        <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--primary)]">
+        <div className="text-xs text-[var(--primary)]">
           Pipeline running · {appName}
         </div>
-        <h1 className="mt-3 font-display text-3xl sm:text-4xl font-bold tracking-tight">
+        <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
           Building your weekly pulse
         </h1>
         <p className="mt-3 text-muted-foreground">
@@ -50,7 +50,7 @@ export function ProcessingView({ stages, appName }: Props) {
         <PipelineStepper stages={stages} />
 
         <div className="mt-6 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             What this stage is doing
           </div>
           <div className="mt-1.5 text-sm leading-relaxed text-foreground">

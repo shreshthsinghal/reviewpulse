@@ -46,8 +46,13 @@ export async function generateWeeklyNote(
   if (reviews.length === 0) {
     return emptyNote(appName, dateRange);
   }
-  // Pick top 3 themes by volume.
-  const topThemes = themes
+  // Pick top 3 themes by volume — but skip "Other" if there are at least 3
+  // other concrete themes. "Other" is the catch-all and surfacing it as a top
+  // theme doesn't give the reader a useful signal.
+  const nonOtherThemes = themes.filter((t) => t.theme !== "Other");
+  const topThemesSource =
+    nonOtherThemes.length >= NOTE_TOP_THEMES ? nonOtherThemes : themes;
+  const topThemes = topThemesSource
     .slice(0, NOTE_TOP_THEMES)
     .map((t) => ({ theme: t.theme, count: t.count, share: t.share }));
 

@@ -27,12 +27,12 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
           transition={{ duration: 0.5 }}
         >
           <div>
-            <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
               Weekly review pulse · for product, growth, support &amp; leadership
             </div>
 
-            <h1 className="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[1.05] tracking-tight text-foreground">
+            <h1 className="mt-5 text-5xl sm:text-6xl font-bold leading-[1.05] tracking-tight text-foreground">
               What users said about your app{" "}
               <span className="relative whitespace-nowrap">
                 <span className="text-[var(--primary)]">this week</span>
@@ -84,7 +84,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
               </Button>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground/80">
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground/80">
               <span>4-stage pipeline · Import → Group → Note → Email</span>
               <span className="hidden sm:inline">·</span>
               <span>Public data only</span>
@@ -104,9 +104,9 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2">
                   <Logo size={22} />
-                  <span className="font-display text-sm font-semibold">Pipeline</span>
+                  <span className="text-sm font-semibold">Pipeline</span>
                 </div>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Live preview
                 </span>
               </div>
@@ -121,7 +121,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
                     key={s.n}
                     className="flex items-start gap-3 rounded-lg border border-border/60 bg-background px-3 py-2.5"
                   >
-                    <span className="font-mono text-[11px] font-semibold text-[var(--primary)] pt-0.5">
+                    <span className="text-xs font-semibold text-[var(--primary)] pt-0.5">
                       {s.n}
                     </span>
                     <div className="flex-1">
@@ -135,7 +135,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
             </div>
 
             {/* Editorial accent */}
-            <div className="absolute -bottom-3 -right-2 rotate-3 rounded-md border border-[var(--primary)]/30 bg-[var(--primary)]/5 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-[var(--primary)]">
+            <div className="absolute -bottom-3 -right-2 rotate-3 rounded-md border border-[var(--primary)]/30 bg-[var(--primary)]/5 px-3 py-1 text-xs text-[var(--primary)]">
               ≤ 250 words · 3 themes · 3 quotes · 3 actions
             </div>
           </motion.div>
@@ -184,10 +184,10 @@ function FeatureBlock({
 }) {
   return (
     <div>
-      <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--primary)]">
+      <div className="text-xs text-[var(--primary)]">
         {kicker}
       </div>
-      <h3 className="mt-2 font-display text-lg font-semibold text-foreground">
+      <h3 className="mt-2 text-lg font-semibold text-foreground">
         {title}
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>

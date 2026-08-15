@@ -125,13 +125,13 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
     <div className="mx-auto max-w-4xl px-6 pt-12 pb-20">
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to landing
       </button>
 
-      <h1 className="mt-6 font-display text-4xl font-bold tracking-tight">
+      <h1 className="mt-6 text-4xl font-bold tracking-tight">
         Choose your review source
       </h1>
       <p className="mt-3 max-w-xl text-muted-foreground">
@@ -203,11 +203,11 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
                       <div className="truncate font-medium text-foreground">
                         {r.title}
                       </div>
-                      <div className="truncate font-mono text-[11px] text-muted-foreground">
+                      <div className="truncate text-xs text-muted-foreground">
                         {r.appId}
                       </div>
                     </div>
-                    <span className="font-mono text-[11px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {r.developer}
                     </span>
                   </button>
@@ -246,7 +246,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
               className="mt-2 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-[var(--primary)] file:px-4 file:py-2.5 file:font-medium file:text-[var(--primary-foreground)] hover:file:bg-[var(--primary)]/90"
             />
             {pdfFile && (
-              <div className="mt-2 font-mono text-xs text-muted-foreground">
+              <div className="mt-2 text-xs text-muted-foreground">
                 {pdfFile.name} · {(pdfFile.size / 1024).toFixed(1)} KB
               </div>
             )}
@@ -272,7 +272,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
               className="mt-2 block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-[var(--primary)] file:px-4 file:py-2.5 file:font-medium file:text-[var(--primary-foreground)] hover:file:bg-[var(--primary)]/90"
             />
             {imgFiles.length > 0 && (
-              <div className="mt-2 font-mono text-xs text-muted-foreground">
+              <div className="mt-2 text-xs text-muted-foreground">
                 {imgFiles.length} file(s): {imgFiles.map((f) => f.name).join(", ")}
               </div>
             )}
@@ -285,7 +285,7 @@ export function InputView({ onSubmit, onBack, busy }: Props) {
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-4">
-        <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {tab === "search"
             ? "Public Play Store listing"
             : tab === "pdf"
@@ -349,10 +349,10 @@ function TabCard({
           {icon}
         </span>
         <div>
-          <div className="font-display text-sm font-semibold text-foreground">
+          <div className="text-sm font-semibold text-foreground">
             {title}
           </div>
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {subtitle}
           </div>
         </div>

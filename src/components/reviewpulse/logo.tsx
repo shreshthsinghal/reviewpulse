@@ -142,7 +142,7 @@ export function Logo({
       {mark}
       {withWordmark && (
         <motion.span
-          className="font-display text-lg font-bold tracking-tight text-foreground"
+          className="text-lg font-bold tracking-tight text-foreground"
           initial={
             intro && !reduceMotion ? { opacity: 0, x: -8 } : false
           }

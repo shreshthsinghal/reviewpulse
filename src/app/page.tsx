@@ -43,6 +43,10 @@ export default function Home() {
   // SSR matches the first client render; if reduced motion is preferred on
   // the client, we flip introDone=true in an effect after mount.
   const [introDone, setIntroDone] = React.useState(false);
+  // introFading tracks the brief fade-out window after the animation has
+  // finished but before the overlay unmounts. Lets the overlay fade out
+  // gracefully instead of being yanked.
+  const [introFading, setIntroFading] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [input, setInput] = React.useState<AppInput | null>(null);
   const [stages, setStages] = React.useState<PipelineStageState[]>(INITIAL_STAGES);
@@ -53,9 +57,20 @@ export default function Home() {
     if (reduceMotion) setIntroDone(true);
   }, [reduceMotion]);
 
+  function handleIntroComplete() {
+    setIntroFading(true);
+    // Unmount the overlay after the fade-out animation completes.
+    setTimeout(() => {
+      setIntroDone(true);
+      setIntroFading(false);
+    }, 500);
+  }
+
   // Live stepper animation — we simulate stage activation while the real
   // /api/pipeline call is in flight. The server returns the final stages;
-  // this is just UX sugar to make the pipeline visibly progress.
+  // this is just UX sugar to make the pipeline visibly progress. Timers
+  // are generous because real classification with chunking can take 20-30s
+  // for apps with many reviews (e.g. Spotify returns 300+).
   React.useEffect(() => {
     if (view !== "processing") return;
     let cancelled = false;
@@ -82,7 +97,7 @@ export default function Home() {
               : x
           )
         );
-      }, 1800)
+      }, 2500)
     );
     timers.push(
       setTimeout(() => {
@@ -96,7 +111,7 @@ export default function Home() {
               : x
           )
         );
-      }, 4000)
+      }, 8000)
     );
     return () => {
       cancelled = true;
@@ -138,10 +153,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Sticky nav — appears after intro completes */}
+      {/* Sticky nav — hidden during the intro animation so it doesn't peek
+          out from behind the overlay. Appears as soon as intro starts fading
+          out or when the user navigates to any other view. */}
       <header
         className={`sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${
-          introDone || view !== "intro" ? "opacity-100" : "opacity-0 pointer-events-none"
+          introFading || introDone || view !== "intro" ? "opacity-100" : "opacity-0 pointer-events-none"
         } transition-opacity duration-300`}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
@@ -168,28 +185,44 @@ export default function Home() {
       <main className="flex-1">
         {view === "intro" && (
           <>
-            {/* Intro overlay — the logo animation lives here */}
+            {/* Intro overlay — fully covers the page and blocks interaction
+                until the logo animation completes (~2s, or instant for
+                reduced-motion). The landing content underneath only fades
+                in once the overlay starts fading out, so users never see a
+                half-rendered page. */}
             {!introDone && (
               <motion.div
-                initial={reduceMotion ? false : { opacity: 1 }}
-                animate={{ opacity: introDone ? 0 : 1 }}
-                transition={{ duration: 0.4, delay: 1.6 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-background pointer-events-none"
+                initial={{ opacity: 1 }}
+                animate={{ opacity: introFading ? 0 : 1 }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-background"
+                style={{ pointerEvents: introFading ? "none" : "auto" }}
               >
                 <Logo
-                  size={96}
+                  size={120}
                   intro
-                  onIntroComplete={() => setIntroDone(true)}
+                  onIntroComplete={handleIntroComplete}
                 />
               </motion.div>
             )}
-            <LandingView
-              introDone={introDone}
-              onGrowwDefault={() =>
-                runPipeline({ kind: "groww_default", appName: "Groww" })
+            {/* Landing content fades in only after intro animation finishes
+                (introFading=true) — keeps the page from being interactive
+                mid-animation. */}
+            <div
+              className={
+                introFading || introDone
+                  ? "opacity-100 transition-opacity duration-500"
+                  : "opacity-0 pointer-events-none"
               }
-              onChooseDifferent={() => setView("input")}
-            />
+            >
+              <LandingView
+                introDone={introFading || introDone}
+                onGrowwDefault={() =>
+                  runPipeline({ kind: "groww_default", appName: "Groww" })
+                }
+                onChooseDifferent={() => setView("input")}
+              />
+            </div>
           </>
         )}
 
@@ -249,10 +282,10 @@ export default function Home() {
       {/* Footer — sticks to bottom */}
       <footer className="mt-auto border-t border-border bg-background">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-6 py-4 sm:flex-row sm:items-center">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             ReviewPulse · weekly app review pulse · public data only · PII-scrubbed
           </div>
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
+          <div className="text-xs text-muted-foreground/70">
             Import → Group → Note → Email
           </div>
         </div>

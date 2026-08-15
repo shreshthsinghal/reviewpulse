@@ -21,7 +21,7 @@ export function PipelineStepper({ stages, variant = "default" }: Props) {
 
   if (variant === "compact") {
     return (
-      <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono uppercase tracking-wider">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
         {ordered.map((s, i) => (
           <React.Fragment key={s.id}>
             <span
@@ -76,10 +76,10 @@ export function PipelineStepper({ stages, variant = "default" }: Props) {
             </div>
             <div className="flex-1 pb-1 pt-0.5">
               <div className="flex items-baseline justify-between gap-2">
-                <div className="font-display text-sm font-semibold text-foreground">
+                <div className="text-sm font-semibold text-foreground">
                   {s.label}
                 </div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   Stage {i + 1} / {ordered.length}
                 </div>
               </div>

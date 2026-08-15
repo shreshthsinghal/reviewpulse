@@ -29,7 +29,7 @@ two skill sets, both made **visibly true** in the product:
 | Charts | Recharts |
 | PDF parsing | `pdf-parse` (server-side) |
 | OCR | GLM-4V via `z-ai-web-dev-sdk` `chat.completions.createVision` |
-| Play Store data | `web_search` + `page_reader` via `z-ai-web-dev-sdk` (public listing only) |
+| Play Store data | `google-play-scraper` (npm) — public-listing batchexecute endpoint, no auth |
 | App Store data | Apple's public per-app RSS feed (`https://itunes.apple.com/rss/customerreviews/...`) |
 | LLM | GLM (`glm-4-plus` for text, `glm-4v-plus` for vision) via `z-ai-web-dev-sdk` |
 | Email "Send" | Optional, via Resend (`EMAIL_API_KEY`) with copy/download fallback |
@@ -152,7 +152,7 @@ session, no CAPTCHA bypass, no private API keys belonging to someone else.
 
 | Source | Path | Auth? | Why it qualifies |
 |---|---|---|---|
-| Play Store listing | `web_search` for the app, then `page_reader` against `https://play.google.com/store/apps/details?id=...&showAllReviews=true` | None | These are the same public pages any browser user sees. No Play Console / Developer API is used (those require app ownership). |
+| Play Store listing | `google-play-scraper` npm package — hits Google's public `batchexecute` JSON-RPC endpoint (the same one the play.google.com web app calls from the browser). No auth. | None | This is the same data any browser user sees on the public listing page. No Play Console / Developer API is used (those require app ownership). |
 | App Store listing | `https://itunes.apple.com/rss/customerreviews/page=1/id=<APPID>/sortby=mostrecent/json` | None | Apple's official, public, per-app Customer Reviews RSS feed. No auth. |
 | PDF upload | `pdf-parse` server-side | N/A | User-provided file; never auto-fetched. |
 | Image upload | GLM-4V via `z-ai-web-dev-sdk` | N/A | User-provided file; never auto-fetched. |
@@ -207,7 +207,7 @@ Enforcement is **by omission, not by a filter you might forget to run**:
 ```
 src/
   app/
-    layout.tsx               # fonts (Inter + Space Grotesk + IBM Plex Mono), ThemeProvider
+    layout.tsx               # fonts (Inter throughout), ThemeProvider
     page.tsx                 # SPA shell, view-state machine
     globals.css              # brand tokens (light/dark), editorial styles
     api/
@@ -287,14 +287,13 @@ Documented honestly:
    styled. If you want a server-rendered `.pdf` byte stream instead, swap in
    `@react-pdf/renderer` and replace the `kind === "pdf"` branch in
    `src/app/api/export/route.ts`.
-2. **Live Play Store fetching.** The Play Store reviews page is JS-rendered in
-   production, so the `page_reader` HTML can be sparse. When that happens,
-   ReviewPulse falls back to the bundled sample dataset (for the Groww default
-   flow) or surfaces a clear error (for any other app). This is the spec-mandated
-   "say so in the UI, don't fake live data" behaviour. If you need more reliable
-   live Play Store reviews in production, the well-trodden path is the
-   `google-play-scraper` npm package (still public-listing-only, no auth) — but
-   note its ToS implications before deploying commercially.
+2. **Live Play Store fetching.** Uses the `google-play-scraper` npm package,
+   which reads the public Play Store listing via the internal `batchexecute`
+   JSON-RPC endpoint (the same one the play.google.com web app calls from
+   the browser — no auth, no Play Console API). Falls back to the bundled
+   sample dataset (Groww default flow) or surfaces a clear error (any other
+   app) when fetching fails. This is the spec-mandated "say so in the UI,
+   don't fake live data" behaviour.
 3. **Email "Send" via Resend.** Resend is used as the example transactional
    email provider because it's the simplest to wire on Vercel. Any Resend-
    compatible HTTP API will work — swap the URL in `src/app/api/send-email/route.ts`.

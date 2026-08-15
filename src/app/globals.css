@@ -7,8 +7,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --font-display: var(--font-space-grotesk);
-  --font-mono: var(--font-plex-mono);
+  --font-display: var(--font-inter);
+  --font-mono: var(--font-inter);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -147,9 +147,9 @@
   height: 1px;
 }
 
-/* Numeric / data styling — monospace tabular figures */
+/* Numeric / data styling — kept subtle; Inter has tabular figures built in.
+   Use .numeric on actual numeric stats where tabular alignment helps. */
 .numeric {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -184,11 +184,9 @@
 
 /* Prose styles for the rendered weekly note markdown */
 .prose-pulse h2 {
-  font-family: var(--font-space-grotesk);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   color: var(--primary);
   border-top: 1px solid var(--border);
   padding-top: 14px;

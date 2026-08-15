@@ -55,7 +55,7 @@ export function SentimentDonut({ data }: { data: SentimentSplit }) {
               style={{ background: d.color }}
             />
             <span className="text-foreground">{d.name}</span>
-            <span className="ml-auto font-mono text-xs text-muted-foreground">
+            <span className="ml-auto text-xs text-muted-foreground">
               {d.value} · {Math.round((d.value / total) * 100)}%
             </span>
           </div>
