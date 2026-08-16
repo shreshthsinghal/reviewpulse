@@ -290,8 +290,8 @@ export async function parseImageReviews(
       "Do NOT include usernames, emails, phone numbers, or any PII. If a field is unreadable, return null. If no reviews are visible, return [].";
 
     const resp = await withRetry(() =>
-      zai.chat.completions.createVision({
-        model: "glm-4v-plus",
+      zai.chat.completions.create({
+        model: "glm-4.5v",
         messages: [
           { role: "system", content: sys },
           {
@@ -357,7 +357,7 @@ async function llmExtractReviewsFromText(
     "Do NOT include usernames, emails, phone numbers, or any PII. If a field is unreadable, return null. If no reviews are visible, return [].";
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-flash",
+      model: "glm-4.5-flash",
       messages: [
         { role: "system", content: sys },
         {

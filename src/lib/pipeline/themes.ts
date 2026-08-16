@@ -106,7 +106,7 @@ Output STRICT JSON ONLY in this format:
 Never invent a theme outside your proposed list. Base assignments only on the review text and title provided.`;
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-flash",
+      model: "glm-4.5-flash",
       messages: [
         { role: "system", content: sys },
         {
@@ -220,7 +220,7 @@ Rules:
 Output: JSON array of {id, theme} pairs, nothing else.`;
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-flash",
+      model: "glm-4.5-flash",
       messages: [
         { role: "system", content: sys },
         {
@@ -284,7 +284,7 @@ Rules:
 Output: JSON object {"themes": ["...", "..."]} nothing else.`;
   const resp = await withRetry(() =>
     zai.chat.completions.create({
-      model: "glm-4-flash",
+      model: "glm-4.5-flash",
       messages: [
         { role: "system", content: sys },
         { role: "user", content: JSON.stringify(sample) },
