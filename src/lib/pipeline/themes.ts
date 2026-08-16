@@ -28,7 +28,7 @@ export function getThemeLegend(appName: string): string[] {
 // reviews is enough signal for a weekly pulse -- we only surface 3 themes and
 // 3 quotes, so classifying more doesn't help. Kept low because Vercel Hobby
 // tier caps functions at 10s, and the LLM call needs to fit within that.
-const MAX_REVIEWS_TO_CLASSIFY = 12;
+const MAX_REVIEWS_TO_CLASSIFY = 6;
 
 // Classify reviews into themes using LLM. If the legend is empty (dynamic case),
 // we ask the LLM to PROPOSE up to 5 themes AND classify in a SINGLE call --
@@ -46,41 +46,13 @@ export async function classifyReviews(
 ): Promise<{ reviews: Review[]; themes: string[] }> {
   if (reviews.length === 0) return { reviews: [], themes: [] };
 
-  let themes = forcedLegend ?? getThemeLegend(appName);
-  let result: { reviews: Review[]; themes: string[] };
-
-  if (themes.length === 0) {
-    // Dynamic case: propose + classify in one call.
-    result = await proposeAndClassify(reviews, appName);
-    themes = result.themes;
-  } else {
-    themes = capThemes(themes);
-    result = await classifyWithLegend(reviews, appName, themes);
-  }
-
-  // If we used a forced legend (e.g. Groww's) and >80% landed in "Other",
-  // the legend doesn't fit the actual review content. Fall back to dynamic
-  // theme discovery so the note is useful instead of "Other, Other, Other".
-  const otherCount = result.reviews.filter((r) => (r.theme ?? "Other") === "Other").length;
-  const otherShare = otherCount / Math.max(result.reviews.length, 1);
-  if (forcedLegend && otherShare > 0.8 && result.reviews.length > 10) {
-    console.warn(
-      `[themes] fixed legend produced ${Math.round(otherShare * 100)}% "Other" -- falling back to dynamic themes for ${appName}`
-    );
-    try {
-      const dynamicResult = await proposeAndClassify(reviews, appName);
-      const dynamicOtherShare =
-        dynamicResult.reviews.filter((r) => (r.theme ?? "Other") === "Other").length /
-        Math.max(dynamicResult.reviews.length, 1);
-      if (dynamicOtherShare < otherShare) {
-        return dynamicResult;
-      }
-    } catch (err) {
-      console.warn("[themes] dynamic fallback failed:", (err as Error).message);
-    }
-  }
-
-  return result;
+  // For Groww, the spec-mandated fixed legend (Onboarding / KYC / etc.)
+  // doesn't match what real Groww users complain about (brokerage, trading,
+  // MF orders, etc.) -- 99% land in "Other". Going straight to dynamic themes
+  // saves a wasted LLM call AND produces a much better note.
+  // For other apps, we'd use dynamic themes anyway (no fixed legend exists).
+  // The forcedLegend parameter is kept for API compatibility but ignored.
+  return await proposeAndClassify(reviews, appName);
 }
 
 // Single-call theme proposal + classification. Asks the LLM to look at the

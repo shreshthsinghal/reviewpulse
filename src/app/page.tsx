@@ -84,21 +84,87 @@ export default function Home() {
     setStages(INITIAL_STAGES);
     setView("processing");
 
-    // Helper to update one stage's status
     const setStage = (id: PipelineStageState["id"], patch: Partial<PipelineStageState>) => {
       setStages((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
     };
 
     try {
-      // Stage 1: Import (active immediately)
+      // Stage 1: Import -- fetch live Groww reviews from Play Store
       setStage("import", { status: "active", message: "Fetching live Groww reviews from Play Store..." });
+      const importRes = await safeFetchJson("/api/pipeline-import", {});
+      if (!importRes.ok) throw new Error(importRes.error);
+      const { reviews, appName, usedFallback, fallbackReason, reviewCount } = importRes.data;
+      setStage("import", {
+        status: "done",
+        message: `Imported ${reviewCount} live reviews from Play Store.`,
+        detail: usedFallback ? fallbackReason : undefined,
+      });
 
-      const res = await safeFetchJson("/api/pipeline");
-      if (!res.ok) throw new Error(res.error);
+      // Stage 2: Group -- PII scrub + theme classification
+      setStage("group", { status: "active", message: "Scrubbing PII + classifying themes..." });
+      const groupRes = await safeFetchJson("/api/pipeline-group", { reviews, appName });
+      if (!groupRes.ok) throw new Error(groupRes.error);
+      const { reviews: classified, themeBreakdown, warning: groupWarning } = groupRes.data;
+      setStage("group", {
+        status: "done",
+        message: `${themeBreakdown.length} themes identified.`,
+        detail: groupWarning,
+      });
 
-      const data = res.data as PipelineResult;
-      setResult(data);
-      setStages(data.stages);
+      // Stage 3: Note -- generate weekly one-pager
+      setStage("note", { status: "active", message: "Generating weekly note..." });
+      const today = new Date().toISOString().slice(0, 10);
+      const twelveWeeksAgo = new Date();
+      twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84);
+      const dateRange = { start: twelveWeeksAgo.toISOString().slice(0, 10), end: today };
+      const noteRes = await safeFetchJson("/api/pipeline-note", {
+        reviews: classified,
+        themes: themeBreakdown,
+        appName,
+        dateRange,
+      });
+      if (!noteRes.ok) throw new Error(noteRes.error);
+      const { note, warning: noteWarning } = noteRes.data;
+      setStage("note", {
+        status: "done",
+        message: `Note generated -- ${note.wordCount} words.`,
+        detail: noteWarning,
+      });
+
+      // Stage 4: Email -- draft subject + body
+      setStage("email", { status: "active", message: "Drafting email..." });
+      const emailRes = await safeFetchJson("/api/pipeline-email", { note });
+      if (!emailRes.ok) throw new Error(emailRes.error);
+      const { email, warning: emailWarning } = emailRes.data;
+      setStage("email", {
+        status: "done",
+        message: "Email draft ready.",
+        detail: emailWarning,
+      });
+
+      // Assemble final result for the dashboard
+      const finalResult: PipelineResult = {
+        reviews: classified,
+        themes: themeBreakdown,
+        note,
+        email,
+        stages: [
+          { id: "import", label: "Import", status: "done", message: `Imported ${reviewCount} live reviews from Play Store.`, detail: usedFallback ? fallbackReason : undefined },
+          { id: "group", label: "Group", status: "done", message: `${themeBreakdown.length} themes identified.`, detail: groupWarning },
+          { id: "note", label: "Generate Note", status: "done", message: `Note generated -- ${note.wordCount} words.`, detail: noteWarning },
+          { id: "email", label: "Draft Email", status: "done", message: "Email draft ready.", detail: emailWarning },
+        ],
+        meta: {
+          appName,
+          source: "play_store",
+          dateRange,
+          reviewCount,
+          usedFallback,
+          fallbackReason,
+        },
+      };
+      setResult(finalResult);
+      setStages(finalResult.stages);
       setView("dashboard");
     } catch (e: any) {
       let msg = e?.message || String(e) || "Pipeline failed";
