@@ -80,10 +80,10 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
     // Explicit instruction: these are the EXACT 3 themes to surface in the
     // "Top Themes" section. Do not substitute or add others.
     topThemesInstruction: `Surface EXACTLY these ${NOTE_TOP_THEMES} themes in the "Top Themes" section, in this order. Do not add "Other".`,
-    candidateQuotes: candidates.map((c) => ({
+    candidateQuotes: candidates.slice(0, 4).map((c) => ({
       theme: c.theme,
       rating: c.rating,
-      text: c.text,
+      text: c.text.slice(0, 150),
     })),
     allThemesWithCounts: themes.map((t) => ({
       theme: t.theme,
@@ -91,11 +91,10 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
       avgRating: t.avgRating,
       topSentiment: t.topSentiment,
     })),
-    sampleReviews: reviews.slice(0, 8).map((r) => ({
+    sampleReviews: reviews.slice(0, 5).map((r) => ({
       rating: r.rating,
       theme: r.theme,
-      title: r.title,
-      text: r.text.slice(0, 180),
+      text: r.text.slice(0, 100),
     })),
   };
 
