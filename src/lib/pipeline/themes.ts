@@ -28,7 +28,7 @@ export function getThemeLegend(appName: string): string[] {
 // reviews is enough signal for a weekly pulse -- we only surface 3 themes and
 // 3 quotes, so classifying more doesn't help. Kept low because Vercel Hobby
 // tier caps functions at 10s, and the LLM call needs to fit within that.
-const MAX_REVIEWS_TO_CLASSIFY = 6;
+const MAX_REVIEWS_TO_CLASSIFY = 4;
 
 // Classify reviews into themes using LLM. If the legend is empty (dynamic case),
 // we ask the LLM to PROPOSE up to 5 themes AND classify in a SINGLE call --
