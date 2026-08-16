@@ -71,3 +71,4 @@ Caddyfile
 dev.log
 server.log
 .env*
+.railway/
