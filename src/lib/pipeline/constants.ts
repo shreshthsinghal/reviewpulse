@@ -30,9 +30,8 @@ export const REVIEW_WINDOW_WEEKS_MAX = 12;
 // Below this many reviews, charts become misleading -- show a sentence instead.
 export const MIN_REVIEWS_FOR_CHARTS = 15;
 
-// Groww public listing IDs (no auth, public pages only)
+// Groww Play Store app ID (public listing, no auth)
 export const GROWW_PLAYSTORE_ID = "com.nextbillion.groww";
-export const GROWW_APPSTORE_ID = "1224809609"; // public RSS numeric id
 
 // Theme legend labels for charts (used by Recharts color tokens)
 export const THEME_PALETTE = [
@@ -42,3 +41,4 @@ export const THEME_PALETTE = [
   "var(--chart-4)",
   "var(--chart-5)",
 ];
+

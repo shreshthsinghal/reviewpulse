@@ -2,17 +2,18 @@
 
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ChevronRight, Search, FileText, Image as ImageIcon } from "lucide-react";
+import { ChevronRight, Search, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Logo } from "../logo";
 import { Button } from "@/components/ui/button";
 
 interface Props {
   onGrowwDefault: () => void;
-  onChooseDifferent: () => void;
   introDone: boolean;
+  busy: boolean;
+  error: string | null;
 }
 
-export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Props) {
+export function LandingView({ onGrowwDefault, introDone, busy, error }: Props) {
   const reduceMotion = useReducedMotion();
   return (
     <div className="relative">
@@ -29,11 +30,11 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
           <div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              Weekly review pulse | for product, growth, support &amp; leadership
+              Live weekly review pulse | for product, growth, support &amp; leadership
             </div>
 
             <h1 className="mt-5 text-5xl sm:text-6xl font-bold leading-[1.05] tracking-tight text-foreground">
-              What users said about your app{" "}
+              What users said about Groww{" "}
               <span className="relative whitespace-nowrap">
                 <span className="text-[var(--primary)]">this week</span>
                 <svg
@@ -58,42 +59,51 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              ReviewPulse ingests the last 8-12 weeks of public App Store &amp; Play
-              Store reviews, groups them into {"<=5"} themes, drafts a {"<=250"}-word weekly
-              note with 3 real quotes &amp; 3 action ideas, and writes the email
-              for you. No dashboards to dig through. No PII anywhere.
+              ReviewPulse fetches the last 8-12 weeks of public Play Store
+              reviews for Groww, groups them into {"<=5"} themes, drafts a
+              {"<=250"}-word weekly note with 3 real quotes &amp; 3 action
+              ideas, and writes the email for you. No dashboards to dig
+              through. No PII anywhere. Real-time -- runs fresh every time
+              you open it.
             </p>
+
+            {error && (
+              <div className="mt-6 rounded-md border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+                {error}
+              </div>
+            )}
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
                 onClick={onGrowwDefault}
+                disabled={busy}
                 className="h-12 px-6 bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary)]/90 rounded-full font-semibold"
               >
-                Analyze Groww&apos;s Weekly Pulse
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={onChooseDifferent}
-                className="h-12 px-6 rounded-full border-border bg-background hover:bg-muted"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Analyze a different app
+                {busy ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Running pipeline...
+                  </>
+                ) : (
+                  <>
+                    Analyze Groww&apos;s Weekly Pulse
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground/80">
               <span>4-stage pipeline | Import {"->"} Group {"->"} Note {"->"} Email</span>
               <span className="hidden sm:inline"> - </span>
-              <span>Public data only</span>
+              <span>Live Play Store data</span>
               <span className="hidden sm:inline"> - </span>
               <span>PII-scrubbed</span>
             </div>
           </div>
 
-          {/* Right column: visual pipeline diagram + sample */}
+          {/* Right column: visual pipeline diagram */}
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 20 }}
             animate={introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -107,12 +117,12 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
                   <span className="text-sm font-semibold">Pipeline</span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  Live preview
+                  Runs live every time
                 </span>
               </div>
               <ol className="mt-4 space-y-3 text-sm">
                 {[
-                  { n: "01", label: "Import", desc: "Public Play Store + App Store reviews", icon: <Search className="h-4 w-4" /> },
+                  { n: "01", label: "Import", desc: "Live Play Store reviews (last 8-12 weeks)", icon: <Search className="h-4 w-4" /> },
                   { n: "02", label: "Group", desc: "PII scrub + <=5 themes", icon: <FileText className="h-4 w-4" /> },
                   { n: "03", label: "Generate Note", desc: "<=250 words | 3 themes | 3 quotes", icon: <FileText className="h-4 w-4" /> },
                   { n: "04", label: "Draft Email", desc: "Subject + body, ready to send", icon: <ImageIcon className="h-4 w-4" /> },
@@ -142,7 +152,7 @@ export function LandingView({ onGrowwDefault, onChooseDifferent, introDone }: Pr
         </motion.div>
       </section>
 
-      {/* Below-the-fold feature strip -- appears only after intro */}
+      {/* Below-the-fold feature strip */}
       {introDone && (
         <motion.section
           initial={reduceMotion ? false : { opacity: 0 }}

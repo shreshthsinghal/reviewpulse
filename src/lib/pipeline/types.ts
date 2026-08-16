@@ -89,13 +89,8 @@ export interface PipelineResult {
 }
 
 export interface AppInput {
-  kind: "groww_default" | "playstore_search" | "pdf" | "image";
+  kind: "groww_default";
   appName?: string;
-  // playstore_search only
-  appId?: string;
-  // pdf/image only
-  fileDataUrl?: string;
-  fileName?: string;
 }
 
 export interface RatingTrendPoint {

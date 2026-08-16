@@ -1,0 +1,14 @@
+# ReviewPulse Railway deployment config
+# Uses Nixpacks (Railway's default build system) with Bun.
+
+[phases.setup]
+nixPkgs = ["bun", "nodejs_22"]
+
+[phases.install]
+cmds = ["bun install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["bun run build"]
+
+[start]
+cmd = "HOSTNAME=0.0.0.0 PORT=$PORT bun run start"
