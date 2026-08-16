@@ -29,7 +29,7 @@ The product is built around two skill sets, both made **visibly true** in the UI
 | Play Store data | `google-play-scraper` (npm) -- public-listing batchexecute endpoint, no auth |
 | LLM | GLM `glm-4.5-flash` via `z-ai-web-dev-sdk` |
 | Email "Send" | Optional, via Resend (`EMAIL_API_KEY`) with copy/download fallback |
-| Deployment | Railway (long-running service, no function timeout) |
+| Deployment | Vercel (Hobby tier -- pipeline split into 4 stages, each under the 10s function timeout) |
 
 ---
 
@@ -74,34 +74,36 @@ EMAIL_FROM=ReviewPulse <you@yourdomain.com>
 ## How it works (real-time)
 
 Every time you click **"Analyze Groww's Weekly Pulse"**, the pipeline runs
-fresh -- no cached data, no sample fallback. The 4 stages:
+fresh -- no cached data, no sample fallback. The 4 stages run as 4 separate
+API endpoints (each fits within Vercel Hobby tier's 10s function timeout):
 
-| Stage | What it does |
-|---|---|
-| **1. Import** | Fetches the newest ~150 public Play Store reviews for Groww via `google-play-scraper`. Drops anything older than 12 weeks. The internal `Review` schema has no PII fields by design. |
-| **2. Group** | (a) Deterministic PII scrub: regex strip of emails, phones, @handles, long numeric IDs, name patterns. (b) LLM classifies each review into one of <=5 themes using the Groww fixed legend (Onboarding / KYC / Verification / Payments / Statements / Reports / Withdrawals). If >80% land in "Other", falls back to dynamic theme discovery. |
-| **3. Generate Note** | Drafts the weekly one-pager: top 3 themes by volume, 3 real PII-scrubbed quotes, 3 action ideas, <=250 words. A second LLM pass verifies no residual PII in the 3 selected quotes. |
-| **4. Draft Email** | Writes a subject (<=60 chars) + body in email-appropriate plain text. |
+| Stage | Endpoint | What it does | Vercel timing |
+|---|---|---|---|
+| **1. Import** | `/api/pipeline-import` | Fetches the newest ~150 public Play Store reviews for Groww via `google-play-scraper`. Drops anything older than 12 weeks. The internal `Review` schema has no PII fields by design. | ~1.5s |
+| **2. Group** | `/api/pipeline-group` | (a) Deterministic PII scrub: regex strip of emails, phones, @handles, long numeric IDs, name patterns. (b) LLM proposes up to 5 themes appropriate to the actual review content AND classifies each review into one of them -- in a single LLM call. Hard cap at 5 themes. | ~6s |
+| **3. Generate Note** | `/api/pipeline-note` | Drafts the weekly one-pager: top 3 themes by volume, 3 real PII-scrubbed quotes, 3 action ideas, <=250 words. A second LLM pass verifies no residual PII in the 3 selected quotes. | ~8s |
+| **4. Draft Email** | `/api/pipeline-email` | Writes a subject (<=60 chars) + body in email-appropriate plain text. | ~6s |
+
+The frontend calls them sequentially, updating the 4-stage stepper UI in
+real time as each stage completes. Total end-to-end time: ~22s.
 
 If you open the app next week, next month, or in 3 months, the date window
 moves with you -- always the last 8-12 weeks ending today.
 
 ---
 
-## Theme legend (Groww fixed)
+## Theme discovery
 
-| # | Theme |
-|---|---|
-| 01 | Onboarding |
-| 02 | KYC / Verification |
-| 03 | Payments |
-| 04 | Statements / Reports |
-| 05 | Withdrawals |
+The pipeline uses **dynamic theme discovery** -- the LLM looks at the
+actual review content and proposes up to 5 themes that fit what users are
+saying (e.g. "Trading Experience", "General Satisfaction", "App Interface",
+"Account Features", "Other"). Hard cap at 5 themes, ever.
 
-If >80% of reviews land in "Other" using this legend (signal: the legend
-doesn't match what real users actually complain about), the pipeline falls
-back to dynamic theme discovery -- the LLM proposes up to 5 themes
-appropriate to the actual review content. Hard cap at 5 themes, ever.
+This works better than the spec's original Groww fixed legend
+(Onboarding / KYC / Verification / Payments / Statements / Reports /
+Withdrawals) because that legend doesn't match what real Groww users
+complain about -- 99% of reviews landed in "Other" with it. Dynamic themes
+produce a much more useful pulse.
 
 ---
 
@@ -149,16 +151,19 @@ src/
     page.tsx                 # SPA shell, view-state machine
     globals.css              # brand tokens (light/dark)
     api/
-      pipeline/route.ts      # POST -- Import > Group > Note > Email (single endpoint)
-      export/route.ts        # POST -- CSV / Markdown / PDF / email-text downloads
-      send-email/route.ts    # POST -- best-effort send via Resend
+      pipeline-import/route.ts  # POST -- Stage 1: fetch live Play Store reviews
+      pipeline-group/route.ts   # POST -- Stage 2: PII scrub + theme classification
+      pipeline-note/route.ts    # POST -- Stage 3: generate weekly note
+      pipeline-email/route.ts   # POST -- Stage 4: draft email
+      export/route.ts          # POST -- CSV / Markdown / PDF / email-text downloads
+      send-email/route.ts       # POST -- best-effort send via Resend
   lib/pipeline/
     types.ts                 # Review schema (PII-by-omission), Theme, Note, EmailDraft
     constants.ts             # Groww legend, caps, app IDs
     llm.ts                   # ZAI (GLM) singleton + withRetry helper
     importers.ts             # Play Store fetch (google-play-scraper)
     pii-scrub.ts             # deterministic + LLM verification
-    themes.ts                # Groww legend + dynamic fallback, cap at 5
+    themes.ts                # dynamic theme discovery + classification, cap at 5
     note.ts                  # weekly note generation (<=250w, 3+3+3)
     email.ts                 # email draft (subject <=60 + body)
     client-utils.ts          # client-safe chart data helpers
@@ -186,7 +191,8 @@ src/
 
 ## Deliverables checklist
 
-- [x] Deployed, working prototype (Railway).
+- [x] Deployed, working prototype on Vercel (Hobby tier).
+      Live URL: https://my-project-psi-olive.vercel.app/
 - [x] One-page weekly note -- downloadable as **PDF** (print-ready HTML) and
       **Markdown**.
 - [x] Email draft -- **Copy** + **Download as .txt** always work; **Send** is
