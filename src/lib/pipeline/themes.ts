@@ -87,8 +87,7 @@ Never invent a theme outside your proposed list. Base assignments only on the re
             toClassify.map((r) => ({
               id: r.id,
               rating: r.rating,
-              title: r.title,
-              text: r.text.slice(0, 300),
+              text: r.text.slice(0, 120),
             }))
           ),
         },
