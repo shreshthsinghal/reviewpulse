@@ -91,11 +91,11 @@ Constraints: total note must be ${NOTE_WORD_LIMIT} words or fewer. No usernames,
       avgRating: t.avgRating,
       topSentiment: t.topSentiment,
     })),
-    sampleReviews: reviews.slice(0, 25).map((r) => ({
+    sampleReviews: reviews.slice(0, 12).map((r) => ({
       rating: r.rating,
       theme: r.theme,
       title: r.title,
-      text: r.text.slice(0, 240),
+      text: r.text.slice(0, 200),
     })),
   };
 
