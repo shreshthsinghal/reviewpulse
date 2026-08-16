@@ -46,8 +46,11 @@ export default function Home() {
     }, 500);
   }
 
-  // Helper: safe fetch + JSON parse. Returns { ok, status, data, error }.
-  async function safeFetchJson(url: string, body?: any): Promise<{ ok: boolean; status: number; data: any; error?: string }> {
+  // Helper: safe fetch + JSON parse with automatic retry on 504/timeout.
+  // Vercel Hobby tier caps functions at 10s; the LLM call sometimes takes
+  // 8-12s and gets killed. Retrying usually succeeds because the LLM is
+  // faster on the second attempt (warm connection, less load).
+  async function safeFetchJson(url: string, body: any, retries = 2): Promise<{ ok: boolean; status: number; data: any; error?: string }> {
     let res: Response;
     try {
       res = await fetch(url, {
@@ -56,6 +59,11 @@ export default function Home() {
         body: body ? JSON.stringify(body) : undefined,
       });
     } catch (e: any) {
+      // Network error -- retry if we have retries left
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return safeFetchJson(url, body, retries - 1);
+      }
       return { ok: false, status: 0, data: null, error: `Network error: ${e?.message ?? e}` };
     }
     const rawText = await res.text();
@@ -64,6 +72,11 @@ export default function Home() {
       try {
         data = JSON.parse(rawText);
       } catch {
+        // Non-JSON response (usually the 504 timeout HTML page)
+        if (retries > 0 && (res.status === 504 || res.status === 502)) {
+          await new Promise((r) => setTimeout(r, 1500));
+          return safeFetchJson(url, body, retries - 1);
+        }
         return {
           ok: false,
           status: res.status,
@@ -73,6 +86,11 @@ export default function Home() {
       }
     }
     if (!res.ok) {
+      // Retry on 504/502 (gateway timeouts from Vercel)
+      if (retries > 0 && (res.status === 504 || res.status === 502)) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return safeFetchJson(url, body, retries - 1);
+      }
       return { ok: false, status: res.status, data, error: data?.error || `Pipeline failed (${res.status})` };
     }
     return { ok: true, status: res.status, data };
